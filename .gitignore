@@ -42,3 +42,4 @@ results/depth4/*/model.pt
 results/depth4/*/probe_data.npz
 results/depth4/*/figures/
 results/depth4/run_depth4.log
+results/depth4_run.out

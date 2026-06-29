@@ -1,0 +1,22 @@
+{
+  "n_runs": 60,
+  "level_means": {
+    "L0 (root)": 0.2358,
+    "L1": 0.373,
+    "L2": 0.3584,
+    "L3 (leaf-parent)": 0.2961
+  },
+  "root_r2_mean_all": 0.2358,
+  "root_r2_mean_n2": 0.1944,
+  "root_r2_mean_n3": 0.2771,
+  "l3_pass2_n2_root_mean": 0.346,
+  "l3_pass2_n2_count": 30,
+  "blooming_root_radius_first": 0.1826,
+  "blooming_root_radius_last": 0.4954,
+  "blooming_root_entropy_first": 1.8627,
+  "blooming_root_entropy_last": 0.0,
+  "ladder_monotone_fraction": 0.1,
+  "ladder_monotone_count": "6/60",
+  "steering_collapse_mean": 6.5765,
+  "steering_collapse_sd": 0.4511
+}
