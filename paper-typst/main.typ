@@ -344,15 +344,11 @@ for this paper independent of any experiment-tracker. Published `grammar = 0` is
 first cell of the sweep, so its number is locatable in the distribution as a
 built-in consistency check.
 
-*The ten grammars are genuinely distinct.* Our level-granularity metrics are
-unchanged if a grammar's symbols are renamed, so a sweep over mere relabelings of
-one grammar would prove nothing. It is not such a sweep. An exact isomorphism test
-on the rule tables (`grammar_iso.py`, checkpointed in `tests/`) finds all
-$binom(10, 2) = 45$ pairs non-isomorphic — even allowing a global
-left#text[↔]right child swap — and correctly flags a grammar against a relabeled
-copy of itself. The between-grammar spread of root $R^2$ (SD $0.055$) likewise
-exceeds the replicate noise (SD $0.040$): the grammars differ in real inference
-difficulty, not just labels.
+*The ten grammars are not isomorphic.* Each grammar's rule table is an adjacency
+structure (which parent expands to which ordered children, per level); two grammars
+are the same up to renaming iff a per-level symbol permutation makes those tables
+coincide. An exact test for such a permutation finds all $binom(10, 2) = 45$ pairs
+distinct (`grammar_iso.py`, checkpointed in `tests/`).
 
 *All grammars train to near-Bayes.* Every run closes 0.82–0.93 of the
 uniform#text[→]Bayes loss gap (mean $0.89 plus.minus 0.03$), matching the pass-1
