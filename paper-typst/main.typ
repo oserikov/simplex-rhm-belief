@@ -314,6 +314,11 @@ linear recovery itself is imperfect, and we do not claim the probe reconstructs 
 posterior exactly. This reproduces the core Simplex belief-geometry phenomenology in a
 setting where the ground-truth belief state is known exactly.
 
+Methodologically, our all-context-position probe is closer to the factored-representation
+work's pooled predictive-vector analyses than to Cagnetta et al.'s last-token RHM setup:
+Cagnetta focuses on predicting the final token, while our readout treats every prefix
+position as a belief state to be decoded.
+
 The most interesting wrinkle is the *inverted strength gradient*: the global root, the
 spec's nominal target, is the hardest latent to decode, while local near-leaf latents are
 read off most cleanly. This is intuitive in hindsight — next-token prediction rewards
@@ -381,9 +386,10 @@ ambiguity explains part, but not all, of the fuzzy root reconstruction.
 
 #set par(justify: false)
 #text(size: 9.5pt)[
-  Cagnetta, F. et al. (2025). *The Random Hierarchy Model* and the emergence of compositional
-  structure in deep networks. arXiv:2505.07070. \
-  (Belief geometry in transformers) (2026). arXiv:2602.02385. \
+  Cagnetta, F., Favero, A., Sclocchi, A., and Wyart, M. (2025). *Scaling Laws and
+  Representation Learning in Simple Hierarchical Languages: Transformers vs. Convolutional
+  Architectures*. arXiv:2505.07070. \
+  Shai, A. et al. (2026). *Transformers learn factored representations*. arXiv:2602.02385. \
   Project sources: `spec.md`, `PREREGISTRATION.md`, `EXECUTION_OUTPUT.md`,
   `results/analysis.json`, `results/root_reconstruction.json`, `artifacts/train_summary.json`.
 ]
