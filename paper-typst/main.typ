@@ -33,7 +33,7 @@
   #set align(center)
   #text(17pt, weight: "bold")[Belief Geometry on the Random Hierarchy Model]
   #v(0.3em)
-  #text(11.5pt)[A small transformer linearly encodes — and causally uses — the exact tree posterior]
+  #text(11.5pt)[A small transformer partially encodes — and causally uses — the exact tree posterior, probed against ground truth]
   #v(0.4em)
   #text(9.5pt, fill: luma(110))[simplex-rhm-belief · run of 29 June 2026 · all numbers from the recorded pipeline output]
 ]
@@ -50,11 +50,12 @@
   against brute-force enumeration to $<10^(-6)$. The trained model reaches a test
   cross-entropy of 0.89 nats, closing #text[≈]88% of the gap between the uniform
   baseline (2.08) and the Bayes-optimal floor (0.73) — it has effectively learned the
-  posterior predictor. A single global linear probe recovers the exact posterior from
-  the residual stream: held-out $R^2 = 0.38$ for the root class versus #text[≈]0 for a
-  shuffled control, with decodability accumulating monotonically across depth
-  ($-0.00 -> 0.15 -> 0.38$) and the belief readout *blooming* outward from the prior
-  toward simplex vertices as context accumulates. A latent-level sweep shows the residual
+  posterior predictor. A single global linear probe partially recovers this posterior
+  from the residual stream: held-out $R^2 = 0.38$ for the root class versus #text[≈]0 for
+  a shuffled control — a real but noisy affine image, not an exact reconstruction — with
+  decodability accumulating monotonically across depth ($-0.00 -> 0.15 -> 0.38$) and the
+  belief readout *blooming* outward from the prior toward simplex vertices as context
+  accumulates. A latent-level sweep shows the residual
   encodes the *whole* hierarchy, most strongly the locally-predictive deep latents
   ($R^2$ up to 0.66) and least strongly the coarse global root. Causal steering on the
   layer-1 residual confirms the belief is *used*, not merely decodable: steering toward
@@ -147,22 +148,29 @@ these predictions in @scorecard.
 
 = Results
 
-== A single linear probe recovers the exact posterior
+== A single linear probe partially decodes the posterior
 
 We fit one global least-squares affine map from the 128-d residual stream to the 8-class
 exact root posterior, on a probe set of $N = 400$ held-out examples, and score it by
 $R^2$ on held-out data. The final-layer probe reaches $R^2 = 0.38$, while the same probe
-fit to *shuffled* labels scores $≈ 0$ ($-0.085$). The information is genuinely present and
-linearly accessible, not an artifact of probe capacity. Projected into a belief-space PCA
-basis (@simplex), the probe's predicted posteriors occupy the same structured region as the
-exact posteriors and reproduce the same position gradient — the affine correspondence is
-real, if noisy, for the global root.
+fit to *shuffled* labels scores $≈ 0$ ($-0.085$). So the posterior is genuinely present
+and linearly accessible above chance — but $R^2 = 0.38$ means the probe explains only
+about a third of the variance: this is a *partial*, noisy recovery, not an exact
+reconstruction. Projected into a belief-space PCA basis (@simplex), the probe's predicted
+posteriors occupy the same structured region as the exact posteriors and reproduce the
+same position gradient, but as a diffuse cloud rather than the discrete point set of the
+ground truth. (The ground-truth panel looks sharper partly because the exact posterior
+takes few distinct values, so identical points overplot, whereas every probe prediction
+differs slightly.) The affine correspondence is real, but for the global root it is weak;
+it strengthens markedly for deeper latents (next subsection) and at later layers.
 
 #fig("figures/posterior_simplex.png",
-  [The residual stream is an affine image of the exact belief simplex. *Left:* PCA(2)
-   of the exact root posteriors; small-$k$ points sit near the prior, large-$k$ points
-   spread toward vertices. *Right:* the linear probe's predictions in the same basis,
-   colored by context position — same region, same gradient, recovered at $R^2 ≈ 0.38$.],
+  [The residual stream is a *partial* affine image of the exact belief simplex. *Left:*
+   PCA(2) of the exact root posteriors (few distinct values, hence sharp overplotted dots);
+   small-$k$ points sit near the prior, large-$k$ points spread toward vertices. *Right:*
+   the linear probe's predictions in the same basis, colored by context position — the
+   same region and position gradient, but a diffuse cloud: held-out root $R^2 ≈ 0.38$, an
+   imperfect recovery, not an exact one.],
   w: 92%) <simplex>
 
 == Decodability accumulates across depth and context
@@ -277,12 +285,16 @@ graded, ruling out a MAP-only representation.
 = Discussion and limitations
 
 The picture is coherent: a tiny transformer trained to near-Bayes-optimal loss on a
-hierarchical grammar represents the exact posterior over the grammar's hidden latents as a
-linear image of the probability simplex; that image is assembled additively across layers,
-blooms from the prior toward the vertices as evidence accumulates, spans the full latent
-hierarchy, and is causally relied upon at generation time. This reproduces the core
-Simplex belief-geometry phenomenology in a setting where the belief state is known exactly
-rather than approximated.
+hierarchical grammar carries a *partial* linear image of the posterior over the grammar's
+hidden latents in its residual stream — fuzzy for the coarse root ($R^2 = 0.38$), sharper
+for the local latents ($R^2$ up to 0.66). That image is assembled additively across
+layers, blooms from the prior toward the vertices as evidence accumulates, spans the full
+latent hierarchy, and is causally relied upon at generation time. We probe against an
+*exactly known* belief state (computed by belief propagation, not approximated), which is
+what lets us quantify the recovery as partial rather than merely assert it — but the
+linear recovery itself is imperfect, and we do not claim the probe reconstructs the
+posterior exactly. This reproduces the core Simplex belief-geometry phenomenology in a
+setting where the ground-truth belief state is known exactly.
 
 The most interesting wrinkle is the *inverted strength gradient*: the global root, the
 spec's nominal target, is the hardest latent to decode, while local near-leaf latents are
