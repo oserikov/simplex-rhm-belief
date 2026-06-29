@@ -426,13 +426,15 @@ pre-registration (`PREREGISTRATION.md`); the expectations below are stated for
 framing, not pre-registered.
 
 *Capacity lifts decodability, with a low-width floor* (@archmarginal). Width is the
-strongest lever: root probe $R^2$ climbs monotonically $0.07 -> 0.21 -> 0.35 -> 0.44$
-across $n_"embd" = 16 -> 256$, and at $n_"embd" = 16$ the root nearly collapses
+strongest lever: across $n_"embd" = 16 -> 256$ the root probe $R^2$ climbs monotonically
+$0.07 -> 0.21 -> 0.35 -> 0.44$, with the mid ($0.12 -> 0.57$) and leaf-parent
+($0.15 -> 0.59$) levels rising in parallel; at $n_"embd" = 16$ the root nearly collapses
 ($R^2 = 0.07$, barely above zero) — a genuine minimum-capacity floor below which the
-coarse latent is no longer linearly present. Depth lifts every level too
-($0.22 -> 0.42$ for the root across $n_"layer" = 1 -> 4$). Heads are the weakest axis,
-as anticipated: from $1$ to $8$ heads the root moves only $0.25 -> 0.36$ and the
-leaf-parent level is essentially flat ($0.42 -> 0.44$). One framing expectation does
+coarse latent is no longer linearly present. Depth lifts every level too: across
+$n_"layer" = 1 -> 4$ the root goes $0.22 -> 0.42$, the mid $0.32 -> 0.54$, and the
+leaf-parent $0.34 -> 0.48$. Heads are the weakest axis, as anticipated: from $1$ to $8$
+heads the root moves only $0.25 -> 0.36$, the mid $0.37 -> 0.48$, and the leaf-parent
+level is essentially flat ($0.42 -> 0.44$). One framing expectation does
 *not* survive: we guessed the root would be information-limited and gain little from
 extra capacity, but width and depth lift it substantially — the root is the weakest
 latent at *every* capacity, yet it is far from saturated.
@@ -441,7 +443,13 @@ latent at *every* capacity, yet it is far from saturated.
 the weakest-decoded level, below the mid ($L_1$) and leaf-parent ($L_2$) latents — the
 pass-1/2 inverted strength gradient is not an artifact of the baseline size. It holds
 at the smallest width (where everything is low) and the largest (where everything is
-high).
+high). The effect is a *two-tier split*, not a monotone ladder: the root sits clearly
+below the local latents (mean $R^2 = 0.31$ vs $0.42$/$0.41$; $L_0$ is the strict minimum
+in $88$ of $99$ runs, with an $L_1 - L_0$ gap of $0.11 plus.minus 0.06$), while the mid
+and leaf-parent levels are statistically indistinguishable from each other ($L_1 < L_2$
+in only $68$ of $99$ runs). "Inverted" refers to the *direction* — the coarse global
+root, the naive prediction's strongest target, is in fact the hardest to read off — not
+to a clean $L_0 < L_1 < L_2$ ordering.
 
 *Depth stretches the build-up and lifts the readout* (@archdepth). Plotting root
 $R^2$ against normalized residual depth (residual index over $n_"layer"$), every model rises from
@@ -452,13 +460,14 @@ two-layer accident — it uses whatever depth it is given.
 
 *Longer training helps the root more than the leaves.* Quadrupling the budget
 ($4000 -> 16000$ steps) lifts the root by $+0.05$ ($0.35 -> 0.41$) and the mid level by
-$+0.05$, but the leaf-parent level by only $+0.02$ ($0.44 -> 0.47$). The coarse,
+$+0.05$ ($0.48 -> 0.53$), but the leaf-parent level by only $+0.02$ ($0.44 -> 0.47$).
+The coarse,
 globally-determined latent is the slowest to be linearized, consistent with it being
 optimization-limited rather than already-saturated.
 
 *Decodability decouples from loss fit* (@archlossfit). Across all 99 runs the
 correlation between `loss_gap_closed` and probe $R^2$ is modest — $0.46$ for the root,
-$0.17$ for the leaf-parent — and the scatter is wide: models that close the same
+$0.42$ for the mid, $0.17$ for the leaf-parent — and the scatter is wide: models that close the same
 fraction of the loss gap span a large range of decodability (root $R^2$ from below
 $0.1$ to above $0.6$ at `loss_gap_closed` $approx 0.9$). Linear belief decodability is
 therefore *not* a restatement of how well the model fit the next-token loss; a model
