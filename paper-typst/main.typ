@@ -314,10 +314,12 @@ linear recovery itself is imperfect, and we do not claim the probe reconstructs 
 posterior exactly. This reproduces the core Simplex belief-geometry phenomenology in a
 setting where the ground-truth belief state is known exactly.
 
-Methodologically, our all-context-position probe is closer to the factored-representation
-work's pooled predictive-vector analyses than to Cagnetta et al.'s last-token RHM setup:
-Cagnetta focuses on predicting the final token, while our readout treats every prefix
-position as a belief state to be decoded.
+Methodologically, this paper sits between the two reference points in the bibliography:
+Cagnetta et al.'s RHM study uses the same hierarchical data model but evaluates the
+last-token prediction setting, while Shai et al.'s *Transformers learn factored
+representations* motivates pooling predictive vectors across contexts. Our readout follows
+the latter all-context-position spirit, treating every prefix position as a belief state to
+be decoded, while keeping Cagnetta et al.'s exact RHM grammar as the data source.
 
 The most interesting wrinkle is the *inverted strength gradient*: the global root, the
 spec's nominal target, is the hardest latent to decode, while local near-leaf latents are
