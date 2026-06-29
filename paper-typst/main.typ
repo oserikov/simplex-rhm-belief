@@ -117,6 +117,28 @@ expand each symbol by a uniformly chosen rule, and emit the leaf string. With th
 parameters the grammar admits exactly $v dot m^(d-1) = 8 dot 2^7 = 1024$ equiprobable
 distinct trees — small enough to enumerate completely.
 
+The exact frozen grammar used in every result is shown below. Symbols are written as
+`S1`, ..., `S8` for readability (the saved arrays use zero-based ids); at each level the
+parent takes one of the two listed child pairs uniformly.
+
+#figure(
+  table(
+    columns: (0.9fr, 1.4fr, 1.4fr, 1.4fr),
+    inset: 4pt,
+    align: horizon,
+    [Parent], [Top expansion], [Middle expansion], [Bottom expansion],
+    [`S1`], [`[S3, S1]` or `[S4, S8]`], [`[S2, S1]` or `[S1, S5]`], [`[S4, S1]` or `[S5, S3]`],
+    [`S2`], [`[S4, S3]` or `[S1, S3]`], [`[S6, S3]` or `[S3, S1]`], [`[S6, S7]` or `[S8, S8]`],
+    [`S3`], [`[S6, S7]` or `[S5, S6]`], [`[S5, S2]` or `[S1, S1]`], [`[S3, S4]` or `[S7, S8]`],
+    [`S4`], [`[S6, S8]` or `[S7, S7]`], [`[S6, S5]` or `[S8, S6]`], [`[S6, S5]` or `[S4, S7]`],
+    [`S5`], [`[S6, S2]` or `[S1, S5]`], [`[S4, S3]` or `[S1, S8]`], [`[S1, S5]` or `[S6, S4]`],
+    [`S6`], [`[S8, S6]` or `[S2, S7]`], [`[S7, S6]` or `[S4, S5]`], [`[S8, S4]` or `[S1, S8]`],
+    [`S7`], [`[S4, S7]` or `[S1, S1]`], [`[S3, S8]` or `[S4, S1]`], [`[S4, S6]` or `[S3, S2]`],
+    [`S8`], [`[S2, S2]` or `[S5, S7]`], [`[S1, S2]` or `[S8, S3]`], [`[S5, S7]` or `[S3, S6]`],
+  ),
+  caption: [Frozen level-specific grammar sampled once before training. Top, middle, and bottom columns correspond to `rules_0`, `rules_1`, and `rules_2` in `artifacts/grammar.npz`.],
+)
+
 *Exact posterior.* Given a leaf prefix of length $k$, the posterior over any hidden latent
 (including the root class) is computed by sum-product belief propagation on the tree:
 upward messages from observed leaves combine through the production rules to give the
