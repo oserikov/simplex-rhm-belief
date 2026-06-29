@@ -14,3 +14,4 @@ experiment/traces/
 experiment/results/
 experiment/state_*.json
 
+artifacts/
