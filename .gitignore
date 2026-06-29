@@ -1,0 +1,16 @@
+.direnv/
+.venv/
+__pycache__/
+*.egg-info/
+.env
+.cursor/
+.ninja_log
+flake.lock
+uv.lock
+
+# Experiment runtime artifacts
+experiment/logs/
+experiment/traces/
+experiment/results/
+experiment/state_*.json
+

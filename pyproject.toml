@@ -1,0 +1,32 @@
+[project]
+name = "simplex-rhm-belief"
+version = "0.1.0"
+description = "Belief-geometry of a small transformer on the Random Hierarchy Model: linear recovery of the exact tree posterior from the residual stream."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "torch>=2.4",
+  "numpy>=2.0",
+  "scikit-learn>=1.5",
+  "matplotlib>=3.9",
+]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.12.5",
+  "ty>=0.0.1a18",
+  "pytest>=8.3",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "UP",
+  "B",
+  "SIM",
+  "I",
+]
+ignore = [
+  "E501",
+]
