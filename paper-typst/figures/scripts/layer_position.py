@@ -6,8 +6,8 @@
 #   layer pushes decodability deep into the sequence.
 # Data: results/analysis.json: layer_r2, layer_r2_shuffled, heatmap_layer_position_r2.
 # Type: 2 panels. (a) grouped line/marker with baseline; (b) annotated heatmap.
-# Note: a few heatmap cells are large negatives (probe far worse than mean);
-#   displayed values clipped to [-1, 1] for legibility (raw values in analysis.json).
+# Note: a few heatmap cells are large negatives (probe far worse than mean).
+#   Colors are clipped to [-1, 1] for legibility, but annotations show raw values.
 import json
 import os
 import sys
@@ -45,10 +45,21 @@ for i, y in enumerate(layer):
     ax1.annotate(f"{y:.2f}", (lx[i], y), textcoords="offset points",
                  xytext=(0, 9), ha="center", fontsize=9)
 
+def fmt_r2(x):
+    if not np.isfinite(x):
+        return "nan"
+    if abs(x) >= 100:
+        return f"{x:.1e}"
+    if abs(x) >= 10:
+        return f"{x:.1f}"
+    return f"{x:.2f}"
+
+
 heat_clip = np.clip(heat, -1, 1)
+heat_annot = np.vectorize(fmt_r2)(heat)
 hm = sns.heatmap(heat_clip, ax=ax2, cmap="viridis", vmin=-1, vmax=1,
-                 annot=heat_clip, fmt=".2f", annot_kws={"size": 8},
-                 cbar_kws={"label": "R² (clipped to [-1,1])"},
+                 annot=heat_annot, fmt="", annot_kws={"size": 8},
+                 cbar_kws={"label": "R² color scale (clipped to [-1,1])"},
                  linewidths=0.5, linecolor="white")
 ax2.set_xlabel("Context position $k$")
 ax2.set_ylabel("Layer")

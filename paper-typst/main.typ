@@ -1,3 +1,19 @@
+#import "@preview/drafting:0.2.2": margin-note
+
+#let page-left-margin = 2cm
+#let page-right-margin = 2cm
+#let note-col-width = 21cm - page-left-margin - page-right-margin
+
+#let todooleg(body) = margin-note(stroke: rgb("#AAAEEE"), margin-right: page-right-margin, page-width: note-col-width)[#par(
+  [#text(body, size: 5pt)],
+  leading: 0.1em,
+)]
+
+#let todoai(body) = margin-note(stroke: rgb("#CC22AA"), margin-right: page-right-margin, page-width: note-col-width)[#par(
+  [#text(body, size: 5pt, fill: rgb("#CC22AA"))],
+  leading: 0.1em,
+)]
+
 #set document(title: "Belief Geometry on the Random Hierarchy Model")
 
 #set page(
@@ -182,30 +198,32 @@ shuffled control stays at $≈ 0$ throughout (@layerpos, left). Each layer adds
 belief-relevant signal. Resolving by context position (@layerpos, right), early positions
 are decodable even at shallow layers, and the final layer pushes near-perfect decodability
 ($R^2 = 1.0$) across positions 0–3. A few mid-layer cells are strongly negative (the probe
-underperforms the mean predictor on those positions); these are clipped for legibility in
-the figure, and the raw values are preserved in `results/analysis.json`.
+underperforms the mean predictor on those positions); the heatmap colors are clipped for
+legibility, but the cell labels show the raw values.
 
 #fig("figures/layer_position.png",
   [Belief decodability accumulates across depth and context. *Left:* root-posterior
    $R^2$ rises layer by layer ($-0.00 -> 0.15 -> 0.38$) while a shuffled control stays at
    #text[≈]0. *Right:* $R^2$(layer, position) heatmap; the final layer reaches $R^2 = 1.0$
-   on the earliest positions. Cells clipped to $[-1, 1]$.], w: 95%) <layerpos>
+   on the earliest positions. Colors are clipped to $[-1, 1]$, while labels show raw values.],
+  w: 95%) <layerpos>
 
 == The whole latent hierarchy is encoded — local latents most strongly
 
 The root is only one of the tree's hidden latents. Probing the exact posterior over latents
-at *every* level reveals a clear gradient (@latents): root ($L_0$) $R^2 = 0.38$; the two
-level-1 mid latents $0.51$ and $0.59$; the deepest level-2 latents $0.61$ and $0.66$. The
-residual encodes the entire hierarchy, but the *local, near-leaf* latents — those most
-directly predictive of the next token — are read off far more cleanly than the coarse
-global root. This is our most informative finding: the spec's primary target (the root) is
-in fact the *hardest* latent to decode, because it is the most abstract and the least
-locally predictive.
+at *every* level reveals a clear gradient with some node-level variation (@latents): root
+($L_0$) $R^2 = 0.38$; the two level-1 mid latents $0.51$ and $0.59$; and the four deepest
+level-2 latents $0.61$, $0.66$, $0.50$, and $0.66$. The residual encodes the entire
+hierarchy, but the *local, near-leaf* latents — those most directly predictive of the next
+token — are usually read off more cleanly than the coarse global root. This is our most
+informative finding: the spec's primary target (the root) is the *hardest* latent to
+decode, because it is the most abstract and the least locally predictive.
 
 #fig("figures/latent_levels.png",
   [The residual encodes the whole latent hierarchy, deeper/local latents most strongly.
-   Probe $R^2$ climbs monotonically from the root ($L_0 = 0.38$, the spec's primary target)
-   through level-1 ($0.51, 0.59$) to the deepest level-2 latents ($0.61, 0.66$).], w: 60%)
+   Probe $R^2$ is lowest for the root ($L_0 = 0.38$, the spec's primary target), higher for
+   level-1 ($0.51, 0.59$), and generally higher for level-2 ($0.61, 0.66, 0.50, 0.66$).],
+  w: 72%)
   <latents>
 
 == The belief blooms with context
@@ -325,6 +343,40 @@ root probe than predicted — turned out to be a feature of the hierarchy rather
 failure of the belief-geometry hypothesis. The exact, enumerable setting turns a qualitative
 interpretability story into quantitative, falsifiable measurement.
 
+= Appendix: Root reconstruction diagnostics <appendix-root-reconstruction>
+
+The root-posterior probe is a regression target, but it is also useful to ask the harsher
+classification question: does the largest coordinate of the linear belief readout recover
+the sampled root class? Across 400 probe examples and 8 context positions (3200
+example-position points), the answer
+is yes for $1565$ points ($48.91%$). This is well above random guessing, but random guessing
+is only 1/8 = $12.5%$ because there are eight root classes; the relevant baseline is not
+$50%$.
+
+#fig("figures/blooming_match.png",
+  [Root reconstruction from the linear belief readout. Green points are example-position
+   pairs where the readout's argmax matches the ground-truth root; red points are
+   mismatches. The overall match rate is $48.91%$, compared with a random-guessing baseline
+   of $12.5%$ (not $50%$) for eight root classes.], w: 72%) <rootmatch>
+
+Restricting to positions where nearly all evidence is visible makes the diagnostic sharper.
+With seven of eight symbols observed ($k = 6$), the exact Bayesian
+posterior's MAP root already matches the sampled root in $95.00%$ of examples, while the
+linear readout matches in $62.25%$. With all eight symbols observed ($k = 7$), the exact
+posterior is deterministic, but the readout still reaches only $70.50%$. Thus early
+ambiguity explains part, but not all, of the fuzzy root reconstruction.
+
+#table(
+  columns: (1fr, auto, auto, auto),
+  inset: 6pt,
+  align: (left, center, center, center),
+  stroke: 0.5pt + luma(200),
+  table.header([*Subset*], [*Prefix length*], [*Readout match*], [*Exact MAP match*]),
+  [All example-position points], [1-8], [$1565 / 3200 = 48.91%$], [--],
+  [All but last symbol], [7], [$249 / 400 = 62.25%$], [$380 / 400 = 95.00%$],
+  [Full sequence], [8], [$282 / 400 = 70.50%$], [$400 / 400 = 100.00%$],
+)
+
 = References
 
 #set par(justify: false)
@@ -333,5 +385,5 @@ interpretability story into quantitative, falsifiable measurement.
   structure in deep networks. arXiv:2505.07070. \
   (Belief geometry in transformers) (2026). arXiv:2602.02385. \
   Project sources: `spec.md`, `PREREGISTRATION.md`, `EXECUTION_OUTPUT.md`,
-  `results/analysis.json`, `artifacts/train_summary.json`.
+  `results/analysis.json`, `results/root_reconstruction.json`, `artifacts/train_summary.json`.
 ]

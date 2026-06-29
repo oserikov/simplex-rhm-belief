@@ -95,8 +95,15 @@ def main() -> None:
                            else g.belief_node(seqs[i], t + 1, ell, pos))
         return Y
 
-    level_nodes = {"root_L0": (0, 0), "mid_L1a": (1, 0), "mid_L1b": (1, 1),
-                   "low_L2a": (2, 0), "low_L2d": (2, 3)}
+    level_nodes = {
+        "root_L0": (0, 0),
+        "mid_L1a": (1, 0),
+        "mid_L1b": (1, 1),
+        "low_L2a": (2, 0),
+        "low_L2b": (2, 1),
+        "low_L2c": (2, 2),
+        "low_L2d": (2, 3),
+    }
     level_r2 = {}
     Xf_rows_tr = np.concatenate([np.arange(i * d, i * d + d) for i in tr_idx])
     Xf_rows_te = np.concatenate([np.arange(i * d, i * d + d) for i in te_idx])

@@ -1,0 +1,177 @@
+{
+  "meta": {
+    "N": 400,
+    "positions": 8,
+    "root_classes": 8,
+    "chance_rate": 0.125,
+    "chance_percent": 12.5
+  },
+  "all_positions": {
+    "matches": 1565,
+    "total": 3200,
+    "rate": 0.4890625,
+    "percent": 48.90625
+  },
+  "per_position": [
+    {
+      "k": 0,
+      "observed_prefix_len": 1,
+      "readout": {
+        "matches": 84,
+        "total": 400,
+        "rate": 0.21,
+        "percent": 21.0
+      },
+      "exact_posterior_map": {
+        "matches": 86,
+        "total": 400,
+        "rate": 0.215,
+        "percent": 21.5
+      }
+    },
+    {
+      "k": 1,
+      "observed_prefix_len": 2,
+      "readout": {
+        "matches": 116,
+        "total": 400,
+        "rate": 0.29,
+        "percent": 28.999999999999996
+      },
+      "exact_posterior_map": {
+        "matches": 111,
+        "total": 400,
+        "rate": 0.2775,
+        "percent": 27.750000000000004
+      }
+    },
+    {
+      "k": 2,
+      "observed_prefix_len": 3,
+      "readout": {
+        "matches": 148,
+        "total": 400,
+        "rate": 0.37,
+        "percent": 37.0
+      },
+      "exact_posterior_map": {
+        "matches": 185,
+        "total": 400,
+        "rate": 0.4625,
+        "percent": 46.25
+      }
+    },
+    {
+      "k": 3,
+      "observed_prefix_len": 4,
+      "readout": {
+        "matches": 170,
+        "total": 400,
+        "rate": 0.425,
+        "percent": 42.5
+      },
+      "exact_posterior_map": {
+        "matches": 199,
+        "total": 400,
+        "rate": 0.4975,
+        "percent": 49.75
+      }
+    },
+    {
+      "k": 4,
+      "observed_prefix_len": 5,
+      "readout": {
+        "matches": 237,
+        "total": 400,
+        "rate": 0.5925,
+        "percent": 59.25
+      },
+      "exact_posterior_map": {
+        "matches": 282,
+        "total": 400,
+        "rate": 0.705,
+        "percent": 70.5
+      }
+    },
+    {
+      "k": 5,
+      "observed_prefix_len": 6,
+      "readout": {
+        "matches": 279,
+        "total": 400,
+        "rate": 0.6975,
+        "percent": 69.75
+      },
+      "exact_posterior_map": {
+        "matches": 322,
+        "total": 400,
+        "rate": 0.805,
+        "percent": 80.5
+      }
+    },
+    {
+      "k": 6,
+      "observed_prefix_len": 7,
+      "readout": {
+        "matches": 249,
+        "total": 400,
+        "rate": 0.6225,
+        "percent": 62.25000000000001
+      },
+      "exact_posterior_map": {
+        "matches": 380,
+        "total": 400,
+        "rate": 0.95,
+        "percent": 95.0
+      }
+    },
+    {
+      "k": 7,
+      "observed_prefix_len": 8,
+      "readout": {
+        "matches": 282,
+        "total": 400,
+        "rate": 0.705,
+        "percent": 70.5
+      },
+      "exact_posterior_map": {
+        "matches": 400,
+        "total": 400,
+        "rate": 1.0,
+        "percent": 100.0
+      }
+    }
+  ],
+  "all_but_last": {
+    "k": 6,
+    "observed_prefix_len": 7,
+    "readout": {
+      "matches": 249,
+      "total": 400,
+      "rate": 0.6225,
+      "percent": 62.25000000000001
+    },
+    "exact_posterior_map": {
+      "matches": 380,
+      "total": 400,
+      "rate": 0.95,
+      "percent": 95.0
+    }
+  },
+  "full_sequence": {
+    "k": 7,
+    "observed_prefix_len": 8,
+    "readout": {
+      "matches": 282,
+      "total": 400,
+      "rate": 0.705,
+      "percent": 70.5
+    },
+    "exact_posterior_map": {
+      "matches": 400,
+      "total": 400,
+      "rate": 1.0,
+      "percent": 100.0
+    }
+  }
+}

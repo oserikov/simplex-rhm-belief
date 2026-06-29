@@ -24,9 +24,17 @@ each position's cloud about the uniform-prior anchor (×). With little context
 (k small) the readout sits in a tight central cluster near the prior; as context
 accumulates the cloud expands outward (mean radius grows monotonically from 0.17
 at k=0 to ~0.39 at k=7, tracking the true posterior's 0.17→0.47). *Right:* the
-same cloud colored by ground-truth root class resolves into separated petals,
-one per inferred root. Raw residual PCA is dominated by token/position nuisance
+same cloud colored by ground-truth root class resolves into separated petals.
+Raw residual PCA is dominated by token/position nuisance
 variance and does not bloom; the *belief content* of the residual is what blooms.
+
+## blooming_match.png — 486 KB
+**Data:** `probe_data.npz` (`hidden[:,2]`, `beliefs`, `roots`).
+**Caption.** The same belief-readout PCA cloud as `blooming.png`, colored by
+whether the inferred root class from the linear readout (`argmax`) matches the
+ground-truth root. Green points are matches; red points are mismatches. The
+overall match rate across all example-position points is 49%, consistent with
+the root posterior being only partially linearly decoded.
 
 ## posterior_simplex.png — 489 KB
 **Data:** `probe_data.npz` (`beliefs`, `hidden[:,2]`).
@@ -40,7 +48,7 @@ region and the same position gradient, though noisily — the held-out root
 posterior R² is ≈0.38, so the affine correspondence is real but imperfect for
 the global root.
 
-## layer_position.png — 219 KB
+## layer_position.png — 228 KB
 **Data:** `analysis.json` (`layer_r2`, `layer_r2_shuffled`,
 `heatmap_layer_position_r2`).
 **Caption.** Belief decodability accumulates across depth and across context.
@@ -48,18 +56,19 @@ the global root.
 (−0.00 → 0.15 → 0.38) while a shuffled-label control stays at ≈0, confirming the
 signal is genuine. *Right:* R²(layer, position) heatmap. Early context positions
 are decodable even at shallow layers, and the final layer pushes decodability
-deep into the sequence (positions 0–3 reach R²=1.0). Values are clipped to
-[−1, 1] for legibility; a few mid-layer cells are strongly negative (probe far
-worse than the mean predictor) — raw values are in `analysis.json`.
+deep into the sequence (positions 0–3 reach R²=1.0). Colors are clipped to
+[−1, 1] for legibility, but annotations show raw values; the largest negative
+cell is shown in scientific notation.
 
-## latent_levels.png — 116 KB
+## latent_levels.png — 130 KB
 **Data:** `analysis.json` (`latent_level_r2`).
 **Caption.** The residual stream encodes the whole latent hierarchy, and deeper,
-more local latents are more strongly encoded than the global root. Linear-probe
-R² climbs monotonically from the root (L0, 0.38 — the spec's primary target,
-highlighted) through the level-1 mid latents (0.51, 0.59) to the deepest level-2
-latents (0.61, 0.66). Local structure near the leaves is easier to read off the
-residual than the global class.
+more local latents are generally more strongly encoded than the global root.
+Linear-probe R² is lowest for the root (L0, 0.38 — the spec's primary target,
+highlighted), higher for the level-1 mid latents (0.51, 0.59), and generally
+higher for the four deepest level-2 latents (0.61, 0.66, 0.50, 0.66). Local
+structure near the leaves is easier to read off the residual than the global
+class, with visible node-level variation.
 
 ## steering.png — 240 KB
 **Data:** `analysis.json` (`steering`).

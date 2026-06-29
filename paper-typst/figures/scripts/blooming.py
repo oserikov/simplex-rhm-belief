@@ -11,9 +11,10 @@
 #   residual. Measured cloud radius grows 0.17 -> 0.39 with k (true belief: 0.17 -> 0.47).
 # Data: artifacts/probe_data.npz: hidden[:, 2, :, :] (final layer), beliefs (true
 #   root posteriors for fitting the readout), roots (true root class).
-# Type: two scatter panels in a shared belief-PCA(2) basis.
+# Type: two scatter panels in a shared belief-PCA(2) basis, plus a companion
+#   match/mismatch scatter using the same basis.
 #   Left  colored by context position k (0..7, viridis) -> blooming.
-#   Right colored by true root class (8 categories, colorblind) -> petals.
+#   Right colored by true root class (8 categories, Set2) -> petals.
 import os
 import sys
 
@@ -41,9 +42,12 @@ pca = PCA(n_components=2, random_state=0).fit(Y)   # basis from the true simplex
 Z = pca.transform(readout)
 pos = np.tile(np.arange(P), N)
 root_pt = np.repeat(roots, P)
+inferred_root = readout.argmax(axis=1)
+root_match = inferred_root == root_pt
 prior = pca.transform(np.full((1, V), 1.0 / V))[0]      # uniform-prior anchor
 rad = np.linalg.norm(Z - prior, axis=1).reshape(N, P).mean(0)
 print("blooming: readout cloud", Z.shape, "radius-from-prior by pos", np.round(rad, 3))
+print("root match rate", round(float(root_match.mean()), 4))
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5.2), sharex=True, sharey=True)
 
@@ -65,7 +69,7 @@ ax1.set_aspect("equal", adjustable="box")
 cb = fig.colorbar(sc, ax=ax1, ticks=range(P))
 cb.set_label("Context position $k$  (rings: mean radius)")
 
-pal = sns.color_palette("colorblind", 8)
+pal = sns.color_palette("Set2", 8)
 for c in range(8):
     m = root_pt == c
     ax2.scatter(Z[m, 0], Z[m, 1], color=pal[c], s=11, alpha=0.75,
@@ -77,6 +81,27 @@ ax2.legend(title="Root class", ncol=2, markerscale=2, framealpha=0.9,
 
 plt.tight_layout()
 out = os.path.join(OUTDIR, "blooming.png")
+plt.savefig(out)
+plt.close()
+print("wrote", out, os.path.getsize(out), "bytes")
+
+fig, ax = plt.subplots(figsize=(7.2, 5.6))
+labels = [
+    ("match", True, "#2ca25f", 0.48),
+    ("mismatch", False, "#de2d26", 0.82),
+]
+for label, flag, color, alpha in labels:
+    m = root_match == flag
+    ax.scatter(Z[m, 0], Z[m, 1], color=color, s=13, alpha=alpha,
+               edgecolors="none", label=f"{label} ({m.mean():.0%})")
+ax.plot(*prior, "x", color="k", ms=9, mew=2, label="uniform prior")
+ax.set_title("Green = ground-truth root matches inferred root")
+ax.set_xlabel("Belief PC1 (arb. units)")
+ax.set_ylabel("Belief PC2 (arb. units)")
+ax.legend(framealpha=0.9, loc="best")
+ax.set_aspect("equal", adjustable="box")
+plt.tight_layout()
+out = os.path.join(OUTDIR, "blooming_match.png")
 plt.savefig(out)
 plt.close()
 print("wrote", out, os.path.getsize(out), "bytes")
