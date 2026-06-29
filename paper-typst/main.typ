@@ -81,7 +81,11 @@
   $times$ 3 replicate seeds shows all four findings — the inverted level gradient, blooming,
   layer accumulation, and causal steering — replicate across the RHM family with low
   replicate variance, and that the published `grammar = 0` numbers sit inside the family
-  distribution.
+  distribution. A further 99-run architecture sweep (width, depth, heads, and training
+  budget, one-axis-at-a-time $times$ 3 grammars $times$ 3 seeds) shows the phenomenology
+  is capacity-robust down to a low-width floor: decodability rises with width and depth,
+  the inverted gradient holds at every capacity, heads matter least, and decodability is
+  only weakly correlated with how well the model fit the loss.
 ]
 
 = Introduction
@@ -404,6 +408,85 @@ rule draw.
    distribution of the collapse magnitude ($alpha{=}0 -> alpha{=}4$) across all
    30 runs: $6.9 plus.minus 0.5$ nats.], w: 100%) <sweepsteer>
 
+= Architecture dependence
+
+The grammar sweep fixes the architecture and varies the data; this section does the
+opposite. We hold the RHM constraints fixed ($s=2, L=3, v=8, m=2$) and vary the
+transformer's capacity one axis at a time (OAT) around the published pass-1 baseline
+($n_"layer" = 2, n_"embd" = 128, n_"head" = 4$, 4000 steps): width $n_"embd" in
+{16, 64, 128, 256}$, depth $n_"layer" in {1, 2, 3, 4}$, heads $n_"head" in {1, 2, 4,
+8}$, and training budget $"steps" in {4000, 16000}$. Each axis varies independently
+with the other three pinned at baseline, so the eleven distinct configs share the
+baseline as their common center. Every config is run across `grammar` $in {0, 1, 2}$
+and master `seed` $in {0, 1, 2}$ — *99 runs total* (`run_arch.py`, writing
+steps-disambiguated dirs `results/arch/g{NN}_L{n}_d{d}_h{h}_t{steps}_s{S}/`). No
+convergence filtering: small models are *expected* to underfit, and we carry
+`loss_gap_closed` as a covariate rather than a gate. This builds on the pass-1
+pre-registration (`PREREGISTRATION.md`); the expectations below are stated for
+framing, not pre-registered.
+
+*Capacity lifts decodability, with a low-width floor* (@archmarginal). Width is the
+strongest lever: root probe $R^2$ climbs monotonically $0.07 -> 0.21 -> 0.35 -> 0.44$
+across $n_"embd" = 16 -> 256$, and at $n_"embd" = 16$ the root nearly collapses
+($R^2 = 0.07$, barely above zero) — a genuine minimum-capacity floor below which the
+coarse latent is no longer linearly present. Depth lifts every level too
+($0.22 -> 0.42$ for the root across $n_"layer" = 1 -> 4$). Heads are the weakest axis,
+as anticipated: from $1$ to $8$ heads the root moves only $0.25 -> 0.36$ and the
+leaf-parent level is essentially flat ($0.42 -> 0.44$). One framing expectation does
+*not* survive: we guessed the root would be information-limited and gain little from
+extra capacity, but width and depth lift it substantially — the root is the weakest
+latent at *every* capacity, yet it is far from saturated.
+
+*The inverted gradient is capacity-robust.* At all eleven configs the root ($L_0$) is
+the weakest-decoded level, below the mid ($L_1$) and leaf-parent ($L_2$) latents — the
+pass-1/2 inverted strength gradient is not an artifact of the baseline size. It holds
+at the smallest width (where everything is low) and the largest (where everything is
+high).
+
+*Depth stretches the build-up and lifts the readout* (@archdepth). Plotting root
+$R^2$ against normalized residual depth (residual index over $n_"layer"$), every model rises from
+$approx 0.01$ at the embedding to its final-layer readout, and deeper models both
+stretch the accumulation curve and reach a higher endpoint: final-layer root $R^2$ is
+$0.22, 0.35, 0.39, 0.42$ for $n_"layer" = 1, 2, 3, 4$. Belief assembly is not a
+two-layer accident — it uses whatever depth it is given.
+
+*Longer training helps the root more than the leaves.* Quadrupling the budget
+($4000 -> 16000$ steps) lifts the root by $+0.05$ ($0.35 -> 0.41$) and the mid level by
+$+0.05$, but the leaf-parent level by only $+0.02$ ($0.44 -> 0.47$). The coarse,
+globally-determined latent is the slowest to be linearized, consistent with it being
+optimization-limited rather than already-saturated.
+
+*Decodability decouples from loss fit* (@archlossfit). Across all 99 runs the
+correlation between `loss_gap_closed` and probe $R^2$ is modest — $0.46$ for the root,
+$0.17$ for the leaf-parent — and the scatter is wide: models that close the same
+fraction of the loss gap span a large range of decodability (root $R^2$ from below
+$0.1$ to above $0.6$ at `loss_gap_closed` $approx 0.9$). Linear belief decodability is
+therefore *not* a restatement of how well the model fit the next-token loss; a model
+can reach near-Bayes loss without linearly representing the coarse belief, and vice
+versa.
+
+#fig("figures/arch_marginal_r2.png",
+  [Marginal capacity effects (OAT). Each panel varies one axis with the other three at
+   baseline; points are root ($L_0$), mid ($L_1$), and leaf-parent ($L_2$) probe
+   $R^2$, error bars are SEM over 3 grammars $times$ 3 seeds, the dotted line marks the
+   shared baseline. Width and depth lift all levels (root collapses at $n_"embd" = 16$);
+   heads matter least; the root is the lowest level in every panel.], w: 100%)
+  <archmarginal>
+
+#fig("figures/arch_depth_accum.png",
+  [Depth and accumulation. *Left:* root-belief probe $R^2$ vs normalized residual
+   depth, one line per $n_"layer"$ (mean $plus.minus$ SEM over grammars $times$ seeds);
+   every model accumulates from the embedding to its readout, and deeper models reach
+   higher. *Right:* final-layer root $R^2$ rises monotonically with depth.], w: 100%)
+  <archdepth>
+
+#fig("figures/arch_lossfit.png",
+  [Decodability vs loss fit, all 99 runs. Root ($L_0$) and leaf-parent ($L_2$) probe
+   $R^2$ against `loss_gap_closed` (fraction of the uniform$arrow.r$Bayes CE gap
+   closed). Dashed lines are least-squares fits; the wide vertical spread at fixed loss
+   fit shows decodability is not determined by how well the model fit the loss.],
+   w: 82%) <archlossfit>
+
 = Discussion and limitations
 
 The picture is coherent: a tiny transformer trained to near-Bayes-optimal loss on a
@@ -443,10 +526,11 @@ whitened probe would tighten these estimates. (iv) Steering is applied at a sing
 (layer 1) along a mean-difference axis; a learned causal direction and a layer sweep would
 strengthen the causal claim. (v) The detailed pass-1 figures
 (@simplex–@steering) are from a single training run and grammar draw; the
-grammar-sweep section quantifies how the *headline* metrics move across 10
-grammars and 3 replicate seeds, but the architecture sweep (varying
-$n_"layer", n_"embd", n_"head"$) and larger/longer grammars ($L = 4$) remain
-future passes.
+grammar-sweep and architecture-sweep sections quantify how the *headline* metrics
+move across 10 grammars / 3 seeds and across 11 capacity configs / 3 grammars /
+3 seeds respectively, but the architecture sweep is one-axis-at-a-time (no
+$n_"layer" times n_"embd" times n_"head"$ interaction cells) and larger/longer
+grammars ($L = 4$) remain a future pass.
 
 = Conclusion
 
@@ -515,6 +599,31 @@ level-$L_2$ probe $R^2$. Loaded directly from `figures/sweep_sanity.csv`.
     architecture, full 4000-step budget. No convergence filtering.],
 ) <sanitytable>
 
+= Appendix: Per-run architecture-sweep sanity table <appendix-arch-sanity>
+
+Every run in the architecture sweep, no filtering — all 99 (11 OAT capacity configs
+$times$ 3 grammars $times$ 3 seeds). `n_layer`, `n_embd`, `n_head`, `steps` give the
+capacity config; `grammar` and `seed` the replicate. `test_ce` is the held-out
+next-token cross-entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes
+gap closed (covariate, not a gate); `root_r2` and `deepest_r2` the level-$L_0$ and
+mean level-$L_2$ probe $R^2$. The deliberately-underpowered small models
+(e.g. $n_"embd" = 16$) are included. Loaded directly from `figures/arch_sanity.csv`.
+
+#let archsanity = csv("figures/arch_sanity.csv")
+#figure(
+  table(
+    columns: 10,
+    inset: 3.2pt,
+    align: center,
+    stroke: 0.5pt + luma(220),
+    table.header(..archsanity.at(0).map(h => [#text(7pt, weight: "bold")[#h]])),
+    ..archsanity.slice(1).flatten().map(c => [#text(7pt)[#c]]),
+  ),
+  caption: [All 99 architecture-sweep runs (11 one-axis-at-a-time capacity configs
+    $times$ 3 grammars $times$ 3 seeds). No convergence filtering; small models are
+    expected to underfit.],
+) <archsanitytable>
+
 = References
 
 #set par(justify: false)
@@ -527,4 +636,6 @@ level-$L_2$ probe $R^2$. Loaded directly from `figures/sweep_sanity.csv`.
   `EXECUTION_OUTPUT.md`, `results/analysis.json`, `results/root_reconstruction.json`,
   `artifacts/train_summary.json`. Grammar sweep: `sweep.py`, `sweep.yaml`,
   `results/sweep/g*/{config.json,analysis.json}`, `figures/sweep_sanity.csv`.
+  Architecture sweep: `spec-arch-sweep.md`, `run_arch.py`,
+  `results/arch/g*/{config.json,analysis.json}`, `figures/arch_sanity.csv`.
 ]

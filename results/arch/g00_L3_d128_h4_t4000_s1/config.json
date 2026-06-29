@@ -1,0 +1,55 @@
+{
+  "config": {
+    "grammar": 0,
+    "seed": 1,
+    "n_layer": 3,
+    "n_embd": 128,
+    "n_head": 4,
+    "lr": 0.003,
+    "steps": 4000,
+    "batch_size": 128,
+    "test_frac": 0.2,
+    "n_probe": 400,
+    "log_every": 1000
+  },
+  "rhm_fixed": {
+    "s": 2,
+    "L": 3,
+    "v": 8,
+    "m": 2
+  },
+  "metrics": {
+    "root_r2": 0.319479836892704,
+    "deepest_r2": 0.5810121127979782,
+    "loss_gap_closed": 0.8949885681173607,
+    "test_ce": 0.8674667477607727,
+    "layer0_r2": 0.0007828325033187866,
+    "layer_final_r2": 0.3194790482521057,
+    "elapsed_sec": 43.93024492263794,
+    "r2_root_L0": 0.319479836892704,
+    "r2_mid_L1a": 0.4575912690158718,
+    "r2_mid_L1b": 0.5456733179089575,
+    "r2_low_L2a": 0.537576558932719,
+    "r2_low_L2b": 0.5889824992371475,
+    "r2_low_L2c": 0.5335881618442598,
+    "r2_low_L2d": 0.6639012311777861
+  },
+  "wandb_run_id": null,
+  "wandb_run_path": null,
+  "git_sha": "c5e6d3f1a08898e5cf07acb436b82c24e280ca09",
+  "timestamp": "2026-06-29T23:36:56",
+  "train_summary": {
+    "uniform_baseline": 2.0794415416798357,
+    "bayes_optimal_mean": 0.7252624411934308,
+    "final_test_loss": 0.8674667477607727,
+    "loss_gap_closed": 0.8949885532007813,
+    "n_params": 597120,
+    "n_train": 820,
+    "n_test": 204,
+    "config": {
+      "n_layer": 3,
+      "n_embd": 128,
+      "n_head": 4
+    }
+  }
+}

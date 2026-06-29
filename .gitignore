@@ -27,3 +27,11 @@ results/sweep/*/model.pt
 results/sweep/*/probe_data.npz
 results/sweep/*/figures/
 results/sweep/run_all.log
+
+# Architecture sweep (pass 3): same policy -- commit only the recoverable
+# config.json + analysis.json + grammar.npz, ignore the heavy regenerable binaries.
+results/arch/*/model.pt
+results/arch/*/probe_data.npz
+results/arch/*/figures/
+results/arch/run_arch.log
+results/arch_run.out

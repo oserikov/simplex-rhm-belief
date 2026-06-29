@@ -34,7 +34,7 @@ from train import train
 WANDB_ENTITY = os.environ.get("WANDB_ENTITY", None)
 WANDB_PROJECT = os.environ.get("WANDB_PROJECT", "simplex-rhm-grammar-sweep")
 
-SWEEP_ROOT = Path("results/sweep")
+DEFAULT_SWEEP_ROOT = Path("results/sweep")
 
 # Fixed RHM constraints for this pass (never swept).
 RHM_FIXED = dict(s=2, L=3, v=8, m=2)
@@ -42,7 +42,7 @@ RHM_FIXED = dict(s=2, L=3, v=8, m=2)
 
 def run_dir_name(cfg: SimpleNamespace) -> str:
     return (f"g{cfg.grammar:02d}_L{cfg.n_layer}_d{cfg.n_embd}"
-            f"_h{cfg.n_head}_s{cfg.seed}")
+            f"_h{cfg.n_head}_t{cfg.steps}_s{cfg.seed}")
 
 
 def git_sha() -> str:
@@ -68,10 +68,10 @@ def build_train_args(cfg: SimpleNamespace) -> SimpleNamespace:
     )
 
 
-def resolve_config() -> tuple[SimpleNamespace, bool, object]:
+def resolve_config() -> tuple[SimpleNamespace, bool, object, Path]:
     """Resolve config from wandb.config (under an agent) or argparse.
 
-    Returns (cfg, use_wandb, wandb_run_or_None).
+    Returns (cfg, use_wandb, wandb_run_or_None, out_root).
     """
     p = argparse.ArgumentParser()
     p.add_argument("--grammar", type=int, default=0)
@@ -85,9 +85,16 @@ def resolve_config() -> tuple[SimpleNamespace, bool, object]:
     p.add_argument("--test-frac", type=float, default=0.2)
     p.add_argument("--n-probe", type=int, default=400)
     p.add_argument("--log-every", type=int, default=1000)
+    p.add_argument("--out-root", type=str, default=str(DEFAULT_SWEEP_ROOT),
+                   help="root dir for artifact dirs (this pass: results/arch)")
     p.add_argument("--no-wandb", action="store_true",
                    help="run the identical pipeline with no network")
     args = p.parse_args()
+
+    # Fail fast on invalid head splits before any model/data work.
+    if args.n_embd % args.n_head != 0:
+        p.error(f"n_embd % n_head != 0: n_embd={args.n_embd} not divisible by "
+                f"n_head={args.n_head} (GPT2 requires n_embd divisible by n_head)")
 
     use_wandb = not args.no_wandb and os.environ.get("WANDB_MODE") != "disabled"
 
@@ -110,12 +117,12 @@ def resolve_config() -> tuple[SimpleNamespace, bool, object]:
         cfg_dict = dict(wandb.config)
 
     cfg = SimpleNamespace(**cfg_dict)
-    return cfg, use_wandb, run
+    return cfg, use_wandb, run, Path(args.out_root)
 
 
 def main() -> None:
-    cfg, use_wandb, run = resolve_config()
-    out_dir = SWEEP_ROOT / run_dir_name(cfg)
+    cfg, use_wandb, run, out_root = resolve_config()
+    out_dir = out_root / run_dir_name(cfg)
     out_dir.mkdir(parents=True, exist_ok=True)
     print(f"=== sweep run -> {out_dir} (wandb={'on' if use_wandb else 'off'}) ===")
 
