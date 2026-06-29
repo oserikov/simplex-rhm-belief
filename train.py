@@ -68,7 +68,7 @@ def conditional_entropy_floor(g: Grammar) -> np.ndarray:
         for row in leaves:
             buckets[tuple(row[:k].tolist())].append(int(row[k]))
         ent = 0.0
-        for pref, nexts in buckets.items():
+        for nexts in buckets.values():
             counts = np.bincount(nexts, minlength=g.v).astype(float)
             p = counts / counts.sum()
             h = -np.sum(p[p > 0] * np.log(p[p > 0]))
@@ -90,7 +90,7 @@ def train(args) -> None:
     perm = rng.permutation(len(leaves))
     leaves, roots = leaves[perm], roots[perm]
     n_test = max(1, int(len(leaves) * args.test_frac))
-    test_x, test_r = leaves[:n_test], roots[:n_test]
+    test_x = leaves[:n_test]
     train_x = leaves[n_test:]
     print(f"train strings={len(train_x)} test strings={len(test_x)}")
 
@@ -141,8 +141,14 @@ def train(args) -> None:
              s=g.s, L=g.L, v=g.v, m=g.m)
 
     # ---- dump residual activations + exact beliefs for the probe set ----
-    # probe set = test strings (held out from training)
-    probe_x = test_t
+    # probe set = model-SEEN (train) strings: we measure how the *learned*
+    # representation encodes beliefs. The probe gets its own train/test split in
+    # analyze.py, so linear decodability is still evaluated honestly. (held-out
+    # LM loss above separately certifies the model generalised, not memorised.)
+    n_probe = min(args.n_probe, len(train_x))
+    probe_x_np = train_x[:n_probe]
+    probe_roots = roots[n_test:][:n_probe]
+    probe_x = torch.tensor(probe_x_np, dtype=torch.long, device=device)
     with torch.no_grad():
         out = model(input_ids=probe_x, output_hidden_states=True)
     hs = out.hidden_states  # tuple len n_layer+1, each (N, d, n_embd)
@@ -151,7 +157,7 @@ def train(args) -> None:
     beliefs = np.zeros((N, g.d, g.v))
     midbeliefs = np.zeros((N, g.d, g.v))  # level-1 left node, for optional probing
     for i in range(N):
-        seq = test_x[i]
+        seq = probe_x_np[i]
         for t in range(g.d):
             beliefs[i, t] = g.belief_root(seq, k=t + 1)
             midbeliefs[i, t] = g.belief_node(seq, k=t + 1, ell=1, pos=0)
@@ -160,8 +166,8 @@ def train(args) -> None:
         hidden=hidden.astype(np.float32),
         beliefs=beliefs.astype(np.float32),
         midbeliefs=midbeliefs.astype(np.float32),
-        roots=test_r.astype(np.int64),
-        sequences=test_x.astype(np.int64),
+        roots=probe_roots.astype(np.int64),
+        sequences=probe_x_np.astype(np.int64),
         floor=floor.astype(np.float32),
         uniform_baseline=np.float32(uniform_baseline),
         final_test_loss=np.float32(final_test),
@@ -194,6 +200,7 @@ def main() -> None:
     p.add_argument("--steps", type=int, default=3000)
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--test-frac", type=float, default=0.2)
+    p.add_argument("--n-probe", type=int, default=400)
     p.add_argument("--log-every", type=int, default=200)
     train(p.parse_args())
 

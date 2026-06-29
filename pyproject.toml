@@ -33,4 +33,5 @@ select = [
 ]
 ignore = [
   "E501",
+  "E702",  # compact matplotlib styling lines (a; b) are deliberate
 ]
