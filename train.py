@@ -33,6 +33,25 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 
+def eval_test_loss(model, test_t: torch.Tensor, batch: int = 4096) -> float:
+    """Mean next-token CE over the full test set, chunked to fit in device memory.
+
+    Equivalent to a single ``model(test_t, labels=test_t).loss`` (mean over all
+    shifted tokens) but evaluated in fixed-size minibatches so the L=4 test set
+    (~52k strings) does not OOM MPS. Every sequence contributes the same number
+    of tokens, so the exact mean is the sequence-count-weighted batch mean.
+    """
+    model.eval()
+    total, n = 0.0, 0
+    with torch.no_grad():
+        for s in range(0, len(test_t), batch):
+            chunk = test_t[s:s + batch]
+            loss = model(input_ids=chunk, labels=chunk).loss.item()
+            total += loss * len(chunk)
+            n += len(chunk)
+    return total / n
+
+
 def build_model(g: Grammar, n_layer: int, n_embd: int, n_head: int) -> GPT2LMHeadModel:
     cfg = GPT2Config(
         vocab_size=g.v,
@@ -137,15 +156,11 @@ def train(args, out_dir: Path = ART) -> dict:
         loss.backward()
         opt.step()
         if step % args.log_every == 0 or step == args.steps - 1:
-            model.eval()
-            with torch.no_grad():
-                tl = model(input_ids=test_t, labels=test_t).loss.item()
+            tl = eval_test_loss(model, test_t)
             model.train()
             print(f"step {step:4d} train_loss={loss.item():.4f} test_loss={tl:.4f}")
 
-    model.eval()
-    with torch.no_grad():
-        final_test = model(input_ids=test_t, labels=test_t).loss.item()
+    final_test = eval_test_loss(model, test_t)
     print(f"FINAL test_loss={final_test:.4f} (uniform {uniform_baseline:.4f}, "
           f"optimal {floor.mean():.4f})")
 

@@ -97,15 +97,27 @@ def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
                            else g.belief_node(seqs[i], t + 1, ell, pos))
         return Y
 
-    level_nodes = {
-        "root_L0": (0, 0),
-        "mid_L1a": (1, 0),
-        "mid_L1b": (1, 1),
-        "low_L2a": (2, 0),
-        "low_L2b": (2, 1),
-        "low_L2c": (2, 2),
-        "low_L2d": (2, 3),
-    }
+    # The per-level probe map is selected by tree depth. L=3 (passes 1-3) keeps
+    # its original three-level keys untouched; L=4 (this pass) hardcodes the full
+    # four-level structure, adding the L3 leaf-parent level (eight nodes). The
+    # deepest-level prefix drives sanity.deepest_r2 below.
+    if g.L == 4:
+        level_nodes = {"root_L0": (0, 0)}
+        level_nodes.update({f"L1_{p}": (1, p) for p in range(2)})
+        level_nodes.update({f"L2_{p}": (2, p) for p in range(4)})
+        level_nodes.update({f"L3_{p}": (3, p) for p in range(8)})
+        deepest_prefix = "L3_"
+    else:
+        level_nodes = {
+            "root_L0": (0, 0),
+            "mid_L1a": (1, 0),
+            "mid_L1b": (1, 1),
+            "low_L2a": (2, 0),
+            "low_L2b": (2, 1),
+            "low_L2c": (2, 2),
+            "low_L2d": (2, 3),
+        }
+        deepest_prefix = "low_L2"
     level_r2 = {}
     Xf_rows_tr = np.concatenate([np.arange(i * d, i * d + d) for i in tr_idx])
     Xf_rows_te = np.concatenate([np.arange(i * d, i * d + d) for i in te_idx])
@@ -186,7 +198,8 @@ def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
         "bayes_floor": bayes_floor,
         "loss_gap_closed": (uniform_baseline - test_ce) / (uniform_baseline - bayes_floor),
         "root_r2": level_r2["root_L0"],
-        "deepest_r2": float(np.mean([level_r2[k] for k in level_r2 if k.startswith("low_L2")])),
+        "deepest_r2": float(np.mean([level_r2[k] for k in level_r2
+                                     if k.startswith(deepest_prefix)])),
     }
 
     # ============ FIGURES ============

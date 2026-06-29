@@ -7,6 +7,7 @@ from grammar_iso import isomorphic, pairwise_isomorphic_pairs
 from rhm import Grammar
 
 SWEPT = [Grammar.random(seed=i) for i in range(10)]
+SWEPT_L4 = [Grammar.random(s=2, L=4, v=8, m=2, seed=i) for i in range(10)]
 
 
 def test_self_isomorphism_fires():
@@ -35,3 +36,9 @@ def test_swept_grammars_pairwise_non_isomorphic():
     """No two of the 10 swept grammars are isomorphic -- even allowing a global flip."""
     assert pairwise_isomorphic_pairs(SWEPT, allow_flip=False) == []
     assert pairwise_isomorphic_pairs(SWEPT, allow_flip=True) == []
+
+
+def test_swept_l4_grammars_pairwise_non_isomorphic():
+    """Pass-4 checkpoint: the 10 L=4 grammars are pairwise non-isomorphic too."""
+    assert pairwise_isomorphic_pairs(SWEPT_L4, allow_flip=False) == []
+    assert pairwise_isomorphic_pairs(SWEPT_L4, allow_flip=True) == []

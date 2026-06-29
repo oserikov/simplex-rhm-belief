@@ -60,7 +60,8 @@ def build_train_args(cfg: SimpleNamespace) -> SimpleNamespace:
     ``seed`` drives model init + data + probe sampling + split.
     """
     return SimpleNamespace(
-        s=RHM_FIXED["s"], L=RHM_FIXED["L"], v=RHM_FIXED["v"], m=RHM_FIXED["m"],
+        s=RHM_FIXED["s"], L=getattr(cfg, "rhm_L", RHM_FIXED["L"]),
+        v=RHM_FIXED["v"], m=RHM_FIXED["m"],
         grammar_seed=cfg.grammar, seed=cfg.seed,
         n_layer=cfg.n_layer, n_embd=cfg.n_embd, n_head=cfg.n_head,
         lr=cfg.lr, steps=cfg.steps, batch_size=cfg.batch_size,
@@ -87,6 +88,8 @@ def resolve_config() -> tuple[SimpleNamespace, bool, object, Path]:
     p.add_argument("--log-every", type=int, default=1000)
     p.add_argument("--out-root", type=str, default=str(DEFAULT_SWEEP_ROOT),
                    help="root dir for artifact dirs (this pass: results/arch)")
+    p.add_argument("--rhm-L", type=int, default=RHM_FIXED["L"],
+                   help="RHM tree depth (default 3; pass 4 uses 4 -> context d=s^L=16)")
     p.add_argument("--no-wandb", action="store_true",
                    help="run the identical pipeline with no network")
     args = p.parse_args()
@@ -104,6 +107,7 @@ def resolve_config() -> tuple[SimpleNamespace, bool, object, Path]:
         n_layer=args.n_layer, n_embd=args.n_embd, n_head=args.n_head,
         lr=args.lr, steps=args.steps, batch_size=args.batch_size,
         test_frac=args.test_frac, n_probe=args.n_probe, log_every=args.log_every,
+        rhm_L=args.rhm_L,
     )
 
     if use_wandb:
@@ -150,7 +154,7 @@ def main() -> None:
     # ---- deterministic manifest ----------------------------------------
     manifest = {
         "config": vars(cfg),
-        "rhm_fixed": RHM_FIXED,
+        "rhm_fixed": {**RHM_FIXED, "L": getattr(cfg, "rhm_L", RHM_FIXED["L"])},
         "metrics": metrics,
         "wandb_run_id": (run.id if run is not None else None),
         "wandb_run_path": (f"{run.entity}/{run.project}/{run.id}"

@@ -35,3 +35,10 @@ results/arch/*/probe_data.npz
 results/arch/*/figures/
 results/arch/run_arch.log
 results/arch_run.out
+
+# Depth-4 sweep (pass 4): same policy -- commit only config.json + analysis.json
+# + grammar.npz, ignore the heavy regenerable binaries.
+results/depth4/*/model.pt
+results/depth4/*/probe_data.npz
+results/depth4/*/figures/
+results/depth4/run_depth4.log
