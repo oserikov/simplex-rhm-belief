@@ -1,3 +1,4 @@
+.DS_Store
 .direnv/
 .venv/
 __pycache__/
@@ -15,3 +16,14 @@ experiment/results/
 experiment/state_*.json
 
 artifacts/
+
+# W&B local runs
+wandb/
+
+# Sweep heavy binaries (deterministically regenerable from grammar+seed);
+# the committed config.json + analysis.json + grammar.npz keep every run
+# recoverable and auditable for the paper.
+results/sweep/*/model.pt
+results/sweep/*/probe_data.npz
+results/sweep/*/figures/
+results/sweep/run_all.log

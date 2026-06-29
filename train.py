@@ -77,8 +77,26 @@ def conditional_entropy_floor(g: Grammar) -> np.ndarray:
     return floor
 
 
-def train(args) -> None:
-    ART.mkdir(exist_ok=True)
+def seed_everything(seed: int) -> None:
+    """Seed the single master RNG path: model init (torch) + numpy.
+
+    Data sampling, probe sampling, and the train/test split all draw from the
+    ``np.random.default_rng(seed)`` created in ``train``; this also pins torch so
+    model initialisation is reproducible for a given master seed.
+    """
+    import random
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.backends.mps.is_available():
+        torch.mps.manual_seed(seed)
+
+
+def train(args, out_dir: Path = ART) -> dict:
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    seed_everything(args.seed)
     device = get_device()
     print(f"device={device}")
     g = Grammar.random(s=args.s, L=args.L, v=args.v, m=args.m, seed=args.grammar_seed)
@@ -135,9 +153,9 @@ def train(args) -> None:
     torch.save(
         {"state_dict": model.state_dict(), "config": model.config.to_dict(),
          "grammar": {"s": g.s, "L": g.L, "v": g.v, "m": g.m, "seed": args.grammar_seed}},
-        ART / "model.pt",
+        out_dir / "model.pt",
     )
-    np.savez(ART / "grammar.npz", **{f"rules_{i}": r for i, r in enumerate(g.rules)},
+    np.savez(out_dir / "grammar.npz", **{f"rules_{i}": r for i, r in enumerate(g.rules)},
              s=g.s, L=g.L, v=g.v, m=g.m)
 
     # ---- dump residual activations + exact beliefs for the probe set ----
@@ -162,7 +180,7 @@ def train(args) -> None:
             beliefs[i, t] = g.belief_root(seq, k=t + 1)
             midbeliefs[i, t] = g.belief_node(seq, k=t + 1, ell=1, pos=0)
     np.savez(
-        ART / "probe_data.npz",
+        out_dir / "probe_data.npz",
         hidden=hidden.astype(np.float32),
         beliefs=beliefs.astype(np.float32),
         midbeliefs=midbeliefs.astype(np.float32),
@@ -172,17 +190,21 @@ def train(args) -> None:
         uniform_baseline=np.float32(uniform_baseline),
         final_test_loss=np.float32(final_test),
     )
+    loss_gap_closed = ((uniform_baseline - final_test)
+                       / (uniform_baseline - float(floor.mean())))
     summary = {
         "uniform_baseline": uniform_baseline,
         "bayes_optimal_mean": float(floor.mean()),
         "final_test_loss": final_test,
+        "loss_gap_closed": float(loss_gap_closed),
         "n_params": int(n_params),
         "n_train": int(len(train_x)),
         "n_test": int(len(test_x)),
         "config": {"n_layer": args.n_layer, "n_embd": args.n_embd, "n_head": args.n_head},
     }
-    (ART / "train_summary.json").write_text(json.dumps(summary, indent=2))
-    print("saved artifacts/ :", [p.name for p in ART.iterdir()])
+    (out_dir / "train_summary.json").write_text(json.dumps(summary, indent=2))
+    print(f"saved {out_dir}/ :", [p.name for p in out_dir.iterdir()])
+    return summary
 
 
 def main() -> None:

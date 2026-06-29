@@ -1,0 +1,14 @@
+{
+  "uniform_baseline": 2.0794415416798357,
+  "bayes_optimal_mean": 0.7612810113972941,
+  "final_test_loss": 0.9091860055923462,
+  "loss_gap_closed": 0.8877943992425951,
+  "n_params": 398848,
+  "n_train": 820,
+  "n_test": 204,
+  "config": {
+    "n_layer": 2,
+    "n_embd": 128,
+    "n_head": 4
+  }
+}

@@ -77,7 +77,11 @@
   layer-1 residual confirms the belief is *used*, not merely decodable: steering toward
   a wrong latent collapses the true next token's log-probability ($-0.73 -> -8.5$). We
   pre-registered our predictions before seeing results; three of four held, and the one
-  miss (root $R^2 < 0.5$) is informative.
+  miss (root $R^2 < 0.5$) is informative. Finally, a 30-run sweep over 10 random grammars
+  $times$ 3 replicate seeds shows all four findings — the inverted level gradient, blooming,
+  layer accumulation, and causal steering — replicate across the RHM family with low
+  replicate variance, and that the published `grammar = 0` numbers sit inside the family
+  distribution.
 ]
 
 = Introduction
@@ -322,6 +326,78 @@ collapse, non-linear-only encoding, MAP-only encoding, flat-with-depth) material
 particular MAP root-class accuracy is only 0.47 while full-simplex $R^2$ is positive and
 graded, ruling out a MAP-only representation.
 
+= Generalization across grammars
+
+The results above come from a single grammar (`grammar = 0`) and a single training
+run. To test whether they are properties of the RHM *family* under our fixed
+constraints ($s=2$, $L=3$, $v=8$, $m=2$, uniform unambiguous rules) rather than
+artifacts of one rule draw, we sweep the *content of the rule table* across ten
+independently sampled grammars (`Grammar.random(seed = 0..9)`) with three replicate
+training seeds each — 30 runs at the pinned architecture ($n_"layer" = 2$,
+$n_"embd" = 128$, $n_"head" = 4$) and full 4000-step budget. A single master seed
+controls model initialisation, training-data sampling, probe sampling, and the
+probe split, so replicates measure end-to-end sampling variance. Each run writes a
+deterministic, self-contained directory
+(`results/sweep/g{NN}_L2_d128_h4_s{S}/`) holding its grammar, a `config.json`
+manifest (resolved config, git SHA, timestamp), and per-run metrics — recoverable
+for this paper independent of any experiment-tracker. Published `grammar = 0` is the
+first cell of the sweep, so its number is locatable in the distribution as a
+built-in consistency check.
+
+*All grammars train to near-Bayes.* Every run closes 0.82–0.93 of the
+uniform#text[→]Bayes loss gap (mean $0.89 plus.minus 0.03$), matching the pass-1
+value (0.88); no run failed to train, so we report all 30 with no convergence
+filtering (@sanitytable). Loss-gap-closed is shown as a sanity covariate, not used
+to gate any run.
+
+*The inverted strength gradient replicates as a distribution* (@sweeplevels).
+Pooling probe $R^2$ by tree level, the root ($L_0$) averages $0.35 plus.minus 0.07$
+(range $0.24$–$0.48$), well below the mid ($L_1$, mean $0.50$) and leaf-parent
+($L_2$, mean $0.49$) latents. The root is the weakest-decoded level across the
+*whole family*, not just in the published draw: the coarse global latent is the
+hardest to read off, while the locally-predictive deeper latents are encoded more
+strongly. The pass-1 root $R^2 = 0.38$ sits comfortably inside the replicate band,
+confirming it as a typical rather than cherry-picked draw. The deepest level shows
+the widest spread (one grammar dips slightly negative), as expected — node-level
+rule structure matters most for the most local latents.
+
+*Blooming and belief-sharpening hold for every grammar* (@sweepbloom). The exact
+posterior entropy falls monotonically with context position $k$ in all ten
+grammars, and the belief readout's radius grows with context — the blooming
+geometry is a family-wide property, not a feature of one rule table.
+
+*Causal steering replicates with a stable effect size* (@sweepsteer). Steering the
+layer-1 residual toward a wrong latent collapses the true next token's mean
+log-probability in every run, by $6.9 plus.minus 0.5$ nats from $alpha = 0$ to
+$alpha = 4$. The belief is causally used across the whole grammar family, with low
+run-to-run variance.
+
+In short, all four pass-1 findings — inverted level gradient, blooming, layer-wise
+accumulation (recomputed in every run's per-layer probe), and causal steering —
+replicate across the grammar family and are stable across replicate sampling. The
+headline phenomenology is a property of the RHM under these constraints, not of one
+rule draw.
+
+#fig("figures/sweep_level_r2.png",
+  [The inverted strength gradient replicates across the grammar family. Each point
+   is one of 30 runs (10 grammars $times$ 3 seeds); violins show the per-level
+   distribution of probe $R^2$, diamonds the means. The root ($L_0$) is the
+   weakest-decoded level ($0.35 plus.minus 0.07$), below the mid ($L_1$) and
+   leaf-parent ($L_2$) latents ($approx 0.49$–$0.50$).], w: 82%) <sweeplevels>
+
+#fig("figures/sweep_blooming.png",
+  [Blooming is family-wide. *Left:* the belief readout's mean radius grows with
+   context position $k$ (one line per grammar, averaged over seeds). *Right:* the
+   exact posterior entropy falls monotonically with $k$ for every grammar.],
+  w: 100%) <sweepbloom>
+
+#fig("figures/sweep_steering.png",
+  [Causal steering replicates with a stable effect size. *Left:* steering the
+   layer-1 residual toward a *wrong* latent collapses the true next token's
+   log-probability in every run (grey lines), mean in orange. *Right:* the
+   distribution of the collapse magnitude ($alpha{=}0 -> alpha{=}4$) across all
+   30 runs: $6.9 plus.minus 0.5$ nats.], w: 100%) <sweepsteer>
+
 = Discussion and limitations
 
 The picture is coherent: a tiny transformer trained to near-Bayes-optimal loss on a
@@ -359,8 +435,12 @@ as a follow-up. (iii) The strongly-negative mid-layer probe cells indicate the a
 is locally mis-specified at some position/layer combinations; a per-position or
 whitened probe would tighten these estimates. (iv) Steering is applied at a single layer
 (layer 1) along a mean-difference axis; a learned causal direction and a layer sweep would
-strengthen the causal claim. (v) All results are from a single training run and grammar
-draw; we did not measure seed-to-seed variance.
+strengthen the causal claim. (v) The detailed pass-1 figures
+(@simplex–@steering) are from a single training run and grammar draw; the
+grammar-sweep section quantifies how the *headline* metrics move across 10
+grammars and 3 replicate seeds, but the architecture sweep (varying
+$n_"layer", n_"embd", n_"head"$) and larger/longer grammars ($L = 4$) remain
+future passes.
 
 = Conclusion
 
@@ -406,6 +486,29 @@ ambiguity explains part, but not all, of the fuzzy root reconstruction.
   [Full sequence], [8], [$282 / 400 = 70.50%$], [$400 / 400 = 100.00%$],
 )
 
+= Appendix: Per-run grammar-sweep sanity table <appendix-sanity>
+
+Every run in the grammar sweep, no filtering. `grammar` indexes the rule-table
+draw (`Grammar.random(seed=grammar)`); `seed` is the master replicate seed; the
+architecture is pinned. `test_ce` is the held-out next-token cross-entropy;
+`loss_gap_closed` is the fraction of the uniform#text[→]Bayes gap closed (sanity
+covariate, not a gate); `root_r2` and `deepest_r2` are the level-$L_0$ and mean
+level-$L_2$ probe $R^2$. Loaded directly from `figures/sweep_sanity.csv`.
+
+#let sanity = csv("figures/sweep_sanity.csv")
+#figure(
+  table(
+    columns: 9,
+    inset: 4pt,
+    align: center,
+    stroke: 0.5pt + luma(220),
+    table.header(..sanity.at(0).map(h => [#text(8pt, weight: "bold")[#h]])),
+    ..sanity.slice(1).flatten().map(c => [#text(8pt)[#c]]),
+  ),
+  caption: [All 30 grammar-sweep runs (10 grammars $times$ 3 seeds), pinned
+    architecture, full 4000-step budget. No convergence filtering.],
+) <sanitytable>
+
 = References
 
 #set par(justify: false)
@@ -414,6 +517,8 @@ ambiguity explains part, but not all, of the fuzzy root reconstruction.
   Representation Learning in Simple Hierarchical Languages: Transformers vs. Convolutional
   Architectures*. arXiv:2505.07070. \
   Shai, A. et al. (2026). *Transformers learn factored representations*. arXiv:2602.02385. \
-  Project sources: `spec.md`, `PREREGISTRATION.md`, `EXECUTION_OUTPUT.md`,
-  `results/analysis.json`, `results/root_reconstruction.json`, `artifacts/train_summary.json`.
+  Project sources: `spec.md`, `spec-grammar-sweep.md`, `PREREGISTRATION.md`,
+  `EXECUTION_OUTPUT.md`, `results/analysis.json`, `results/root_reconstruction.json`,
+  `artifacts/train_summary.json`. Grammar sweep: `sweep.py`, `sweep.yaml`,
+  `results/sweep/g*/{config.json,analysis.json}`, `figures/sweep_sanity.csv`.
 ]

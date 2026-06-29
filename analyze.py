@@ -37,15 +37,15 @@ RES = Path("results")
 FIG = RES / "figures"
 
 
-def load_grammar() -> Grammar:
-    d = np.load(ART / "grammar.npz")
+def load_grammar(art_dir: Path = ART) -> Grammar:
+    d = np.load(Path(art_dir) / "grammar.npz")
     L = int(d["L"])
     rules = [d[f"rules_{i}"] for i in range(L)]
     return Grammar(s=int(d["s"]), L=L, v=int(d["v"]), m=int(d["m"]), rules=rules)
 
 
-def load_model(g: Grammar):
-    ckpt = torch.load(ART / "model.pt", map_location="cpu", weights_only=False)
+def load_model(g: Grammar, art_dir: Path = ART):
+    ckpt = torch.load(Path(art_dir) / "model.pt", map_location="cpu", weights_only=False)
     cfg = ckpt["config"]
     model = build_model(g, cfg["n_layer"], cfg["n_embd"], cfg["n_head"])
     model.load_state_dict(ckpt["state_dict"])
@@ -64,17 +64,19 @@ def fit_probe(X_tr, Y_tr, X_te, Y_te):
     return reg, r2, r2_sh
 
 
-def main() -> None:
-    RES.mkdir(exist_ok=True)
-    FIG.mkdir(parents=True, exist_ok=True)
-    data = np.load(ART / "probe_data.npz")
+def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
+    art_dir, res_dir = Path(art_dir), Path(res_dir)
+    fig_dir = res_dir / "figures"
+    res_dir.mkdir(parents=True, exist_ok=True)
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    data = np.load(art_dir / "probe_data.npz")
     hidden = data["hidden"]          # (N, n_layers+1, d, n_embd)
     beliefs = data["beliefs"]        # (N, d, v)  exact root posterior
     N, n_layers, d, n_embd = hidden.shape
     v = beliefs.shape[-1]
     print(f"probe set N={N} layers={n_layers} d={d} n_embd={n_embd} v={v}")
 
-    g = load_grammar()
+    g = load_grammar(art_dir)
     results: dict = {"meta": {"N": int(N), "n_layers": int(n_layers), "d": int(d),
                               "n_embd": int(n_embd), "v": int(v)}}
 
@@ -162,18 +164,48 @@ def main() -> None:
                      for t in range(d)] for i in range(N)]).mean(0)
     results["mean_posterior_entropy_by_position"] = ent.tolist()
 
+    # ---- blooming: mean readout radius vs context position k -----------
+    # radius = RMS spread of the *belief readout* (final-layer linear probe's
+    # predicted posterior) about its per-position centroid. As context grows the
+    # readout blooms outward from the prior toward simplex vertices. Measured on
+    # the belief content, not the raw residual (whose norm is dominated by
+    # token/position nuisance variance and does not bloom).
+    radius = []
+    for t in range(d):
+        Pt = probes[final].predict(hidden[:, final, t])  # (N, v) predicted belief
+        radius.append(float(np.sqrt(((Pt - Pt.mean(0)) ** 2).sum(1).mean())))
+    results["blooming_radius_by_position"] = radius
+
+    # ---- sanity covariates (for the cross-grammar appendix table) ------
+    uniform_baseline = float(data["uniform_baseline"])
+    bayes_floor = float(data["floor"].mean())
+    test_ce = float(data["final_test_loss"])
+    results["sanity"] = {
+        "test_ce": test_ce,
+        "uniform_baseline": uniform_baseline,
+        "bayes_floor": bayes_floor,
+        "loss_gap_closed": (uniform_baseline - test_ce) / (uniform_baseline - bayes_floor),
+        "root_r2": level_r2["root_L0"],
+        "deepest_r2": float(np.mean([level_r2[k] for k in level_r2 if k.startswith("low_L2")])),
+    }
+
     # ============ FIGURES ============
-    _fig_layer_position(layer_r2, layer_r2_sh, pos_r2, heat, FIG)
-    _fig_blooming(hidden[:, final], beliefs, d, FIG)
-    _fig_simplex_image(probes[final], hidden[:, final], beliefs, d, FIG)
+    _fig_layer_position(layer_r2, layer_r2_sh, pos_r2, heat, fig_dir)
+    _fig_blooming(hidden[:, final], beliefs, d, fig_dir)
+    _fig_simplex_image(probes[final], hidden[:, final], beliefs, d, fig_dir)
 
     # ---- 3. causal steering --------------------------------------------
-    steer = causal_steering(g, hidden)
+    steer = causal_steering(g, hidden, art_dir)
     results["steering"] = steer
-    _fig_steering(steer, FIG)
+    _fig_steering(steer, fig_dir)
 
-    (RES / "analysis.json").write_text(json.dumps(results, indent=2))
-    print("wrote results/analysis.json and figures:", [p.name for p in FIG.iterdir()])
+    (res_dir / "analysis.json").write_text(json.dumps(results, indent=2))
+    print(f"wrote {res_dir}/analysis.json and figures:", [p.name for p in fig_dir.iterdir()])
+    return results
+
+
+def main() -> None:
+    analyze_run()
 
 
 def _fig_layer_position(layer_r2, layer_r2_sh, pos_r2, heat, FIG):
@@ -229,7 +261,7 @@ def _fig_simplex_image(probe, Xf, beliefs, d, FIG):
     fig.tight_layout(); fig.savefig(FIG / "simplex_image.png", dpi=150); plt.close(fig)
 
 
-def causal_steering(g, hidden, patch_layer=1, alphas=None):
+def causal_steering(g, hidden, art_dir=ART, patch_layer=1, alphas=None):
     """Causal steering of the next-token's parent latent (mean-difference patch).
 
     The latent that *governs* the next token is its parent at level L-1. We patch
@@ -250,8 +282,8 @@ def causal_steering(g, hidden, patch_layer=1, alphas=None):
     if alphas is None:
         alphas = [0.0, 0.5, 1.0, 2.0, 4.0]
     device = get_device()
-    model = load_model(g).to(device)
-    data = np.load(ART / "probe_data.npz")
+    model = load_model(g, art_dir).to(device)
+    data = np.load(Path(art_dir) / "probe_data.npz")
     sequences = data["sequences"]
     N, d = sequences.shape
 
