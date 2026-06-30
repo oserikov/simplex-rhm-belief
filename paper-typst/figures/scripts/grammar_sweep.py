@@ -129,12 +129,13 @@ def fig_steering():
     ax[0].set_ylabel("mean log p(true next token)")
     ax[0].set_title("Corrupting the belief breaks prediction\n(every run)")
     ax[0].legend()
-    # unfilled violin body (outline only) + box + jittered points; give Y room
-    sns.violinplot(y=collapse, ax=ax[1], inner="box", cut=0, fill=False,
-                   linecolor=sns.color_palette("colorblind")[0], linewidth=1.6)
-    sns.stripplot(y=collapse, ax=ax[1], color=sns.color_palette("colorblind")[0],
-                  size=5, alpha=0.8, jitter=0.12)
-    pad = 0.15 * (np.max(collapse) - np.min(collapse) + 1e-9)
+    # match sweep_level_r2 style: grey violin body, jittered points, orange diamond mean
+    cb = sns.color_palette("colorblind")
+    sns.violinplot(y=collapse, ax=ax[1], inner=None, cut=0, color="0.85", linewidth=1)
+    sns.stripplot(y=collapse, ax=ax[1], color=cb[0], size=5, alpha=0.75, jitter=0.08)
+    ax[1].plot(0, np.mean(collapse), "D", color=cb[3], markersize=10, label="mean")
+    ax[1].legend()
+    pad = 0.2 * (np.max(collapse) - np.min(collapse) + 1e-9)
     ax[1].set_ylim(np.min(collapse) - pad, np.max(collapse) + pad)
     ax[1].set_ylabel(f"log p(true) collapse  (α=0 → α={alphas[-1]:.0f})")
     ax[1].set_title("Steering effect size across grammars")

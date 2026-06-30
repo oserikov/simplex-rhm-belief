@@ -119,7 +119,8 @@ tiny transformer on such a grammar and asks whether the residual stream carries 
 posterior, where in the network it lives, what geometry it traces, and whether the model
 relies on it.
 
-= The Random Hierarchy Model and exact beliefs
+= Experimental design
+== The Random Hierarchy Model and exact beliefs
 
 *Grammar.* We use the defaults of the spec: arity $s = 2$, depth $L = 3$, so each string
 has $d = s^L = 8$ leaves; per-level vocabulary $v = 8$; and $m = 2$ production rules per
@@ -162,7 +163,7 @@ equals $s^L$ and that unambiguity holds. The recorded self-test (a representativ
 shows the root posterior sharpening with context — entropy $1.89$ nats at $k=1$ falling
 to $0.00$ (a single consistent root) by $k=3$ — which previews the blooming geometry below.
 
-= Model and training
+== Model and training
 
 We train a HuggingFace `GPT2LMHeadModel` with 2 layers, `n_embd` = 128, 4 heads, and all
 dropout disabled, totalling 398,848 parameters. There is no tokenizer: RHM leaf symbols are
@@ -186,7 +187,7 @@ which is the precondition for asking whether it represents the posterior interna
    run (grammar seed 0, $n_"layer"{=}2, n_"embd"{=}128, n_"head"{=}4$),
    `results/refrun/`.], w: 66%) <loss>
 
-= Pre-registered prediction
+== Pre-registered prediction
 
 Following the project's honor-code rule, we committed our predictions to git *before*
 training any model or computing any probe (`PREREGISTRATION.md`). In brief, we predicted:
@@ -254,7 +255,7 @@ legibility, but the cell labels show the raw values].
 == The whole latent hierarchy is encoded — local latents most strongly
 
 The root is only one of the tree's hidden latents. Probing the exact posterior over latents
-at *every* level reveals a clear gradient with some node-level variation (@latents) (*note*: later refined towards inverted U-shape hypothesis). Precisely, root
+at *every* level reveals a clear gradient with some node-level variation (@latents). Precisely, root
 ($L_0$) $R^2 = 0.38$; the two level-1 mid latents $0.51$ and $0.59$; and the four deepest
 level-2 latents $0.61$, $0.66$, $0.50$, and $0.66$. The residual encodes the entire
 hierarchy, but the *local, near-leaf* latents, which are more directly predictive of the next
@@ -267,6 +268,20 @@ decode, likely because it is the most abstract thus least locally predictive.
    level-1 ($0.51, 0.59$), and generally higher for level-2 ($0.61, 0.66, 0.50, 0.66$).],
   w: 72%)
   <latents>
+
+This "deeper decodes stronger" reading is *refined* once the tree is one level taller.
+Scaling the identical per-level probe to $L = 4$ (the depth study in @depth4levels) shows the
+gradient is really an *inverted U*: the mid-level latents decode strongest, while *both* the
+coarse root and the most-local leaf-parents fall off. The headline is not "local beats global"
+but "mid beats both ends" — previewed here, quantified across 60 runs in the appendix.
+
+#fig("figures/depth4_level_r2.png",
+  [Preview of the inverted-U refinement (full detail in @depth4levels). At $L = 4$, per-level
+   probe $R^2$ across 60 runs rises from the root ($L_0$) to the mid latents ($L_1, L_2$) and
+   falls back toward the leaf-parents ($L_3$) — an inverted U, not a monotone "deeper is
+   stronger" ladder.],
+  w: 74%)
+  <latents-invu>
 
 == The belief blooms with context
 
@@ -311,7 +326,7 @@ $0.22$ to $0.53$. The belief state is therefore causally used, not merely decoda
    true next token's log-probability (left, orange: $-0.73 -> -8.5$) and re-routes mass onto
    the wrong latent's children (right, orange: $0.22 -> 0.53$).], w: 95%) <steering>
 
-= Pre-registration scorecard <scorecard>
+== Pre-registration scorecard <scorecard>
 
 We grade each pre-registered prediction honestly against the outcome (@scorecardtable). #todooleg[I was over-using monotonicity in my initial guess, which is a very strong claim, to be revised (shuoldn't have written it in the first place)]
 
@@ -351,180 +366,6 @@ deeper latent in the hierarchy. None of the pre-registered failure modes (degene
 collapse, non-linear-only encoding, MAP-only encoding, flat-with-depth) materialized; in
 particular MAP root-class accuracy is only 0.47 while full-simplex $R^2$ is positive and
 graded, ruling out a MAP-only representation.
-
-= Robustness studies
-
-#todooleg[I think later I will move it to appendix]
-== Generalization across grammars
-
-The results above come from a single grammar #footnote[`grammar = 0`] and a single training
-run. To test whether they are properties of the RHM *family* under the same fixed
-constraints #footnote[Reminder: fixed constraints so far are ($s=2$, $L=3$, $v=8$, $m=2$, uniform unambiguous rules)] rather than
-artifacts of one rule draw, we sweep the content of the rule table#footnote[See the example (first tried grammar) rule table at @ruletable] across ten
-independently sampled grammars with three replicate
-training seeds each, resulting in 30 runs. 
-We have ensured that the sampled grammars aren't isomorpic by post-factum ensuring that the respective nodes adjacency tables are not equivalent up to a per-level symbol permutation. #footnote[Test code in `grammar_iso.py`]
-The model architecture / training code remained the same as in previous experiments. 
-#footnote[Reminder: model architecture so far: GPT-2-style transformer, 2 layers of 4 attn heads each, hidden size 128, 4k train steps. A single master seed
-controls model initialisation, training-data sampling, probe sampling, and the
-probe split, so replicates measure end-to-end sampling variance. Each run writes a
-deterministic, self-contained directory
-(`results/sweep/g{NN}_L2_d128_h4_s{S}/`) holding its grammar, a `config.json`
-manifest (resolved config, git SHA, timestamp), and per-run metrics — recoverable
-for this paper independent of any experiment-tracker. Published `grammar = 0` is the
-first cell of the sweep, so its number is locatable in the distribution as a
-built-in consistency check.]. 
-
-
-- *All grammars train to near-Bayes.* Every run closes $0.82–0.93\%$ of the uniform to Bayes-optimal loss gap (mean $0.89 plus.minus 0.03$), in line with the initial observation. The runs details can be seen in @sanitytable.
-
-- *The root remains the weakest-decoded level* (@sweeplevels). Pooling probe $R^2$ by tree level, the root ($L_0$) averages $0.35 plus.minus 0.07$ (range $0.24$–$0.48$), well below the mid ($L_1$, mean $0.50$) and leaf-parent ($L_2$, mean $0.49$) latents. The deepest level shows the widest spread (one grammar dips slightly negative #todooleg[investigate; not a failed training. poor train-test split?]) #todooleg[node-level
-rule structure matters most for the most local latents?].
-
-- *Blooming and belief-sharpening alongside context hold for every grammar* (@sweepbloom). The exact posterior entropy falls with context position $k$ in all ten grammars, and the belief readout's radius grows with context.
-
-- *Causal steering replicates with a stable effect size* (@sweepsteer). Steering the layer-1 residual toward a wrong latent collapses the true next token's mean log-probability in every run: as the patch strength $alpha$ increases from $0$ to $4$, that log-probability drops by $6.9 plus.minus 0.5$ nats (mean $plus.minus$ SD across the 30 runs), with low run-to-run variance.
-
-In short, all four earlier findings -- poor root decodability, blooming, layer-wise
-accumulation (recomputed in every run's per-layer probe), and causal steering --
-replicate across the grammar family.
-
-
-#fig("figures/sweep_level_r2.png",
-  [The inverted strength gradient replicates across the grammar family. Each point
-   is one of 30 runs (10 grammars $times$ 3 seeds); violins show the per-level
-   distribution of probe $R^2$, diamonds the means. The root ($L_0$) is the
-   weakest-decoded level ($0.35 plus.minus 0.07$), below the mid ($L_1$) and
-   leaf-parent ($L_2$) latents ($approx 0.49$–$0.50$).], w: 82%) <sweeplevels>
-
-#fig("figures/sweep_blooming.png",
-  [Blooming is family-wide. *Left:* the belief readout's mean radius grows with
-   context position $k$ (one line per grammar, averaged over seeds). *Right:* the
-   exact posterior entropy falls with $k$ for every grammar.],
-  w: 100%) <sweepbloom>
-
-#fig("figures/sweep_steering.png", 
-  [Causal steering replicates with a stable effect size. *Left:* steering the
-   layer-1 residual toward a *wrong* latent collapses the true next token's
-   log-probability in every run (grey lines), mean in orange. *Right:* the
-   distribution of the collapse magnitude — the drop in the true token's mean log-probability
-   as $alpha{=}0 -> alpha{=}4$ — across all 30 runs: $6.9 plus.minus 0.5$ nats.],
-  w: 100%) <sweepsteer>
-
-== Architecture dependence
-
-The grammar sweep fixes the architecture and varies the data; this section does the opposite. 
-Again, we keep the RHM constraints. 
-We vary the transformer's capacity one axis at a time around the baseline. We consider (in bold are baseline params) $n_"layer"$ in {1, *2*, 3, 4}, $n_"embd"$ in {16, 64, *128*, 256}, $n_"head"$ in {1, 2, *4*, 8}, and training $"steps"$ in {*4000*, 16000}. \
-Each axis varies independently with the other three pinned at baseline, the baseline being their common center. Every config is run across `grammar` $in {0, 1, 2}$
-and `seed` $in {0, 1, 2}$ from grammar sweep, *99 runs total* #footnote[`run_arch.py` , writing
-steps-disambiguated dirs `results/arch/g{NN}_L{n}_d{d}_h{h}_t{steps}_s{S}/`)]. 
-Small models are *expected* to underfit. 
-
-
-*Model capacity lifts decodability, with a low-width floor* (@archmarginal). Width is the strongest lever, across $n_"embd" = 16 -> 256$ the root probe $R^2$ climbs monotonically (from being undecodable at 16): $0.07 -> 0.21 -> 0.35 -> 0.44$, with the mid ($0.12 -> 0.57$) and leaf-parent ($0.15 -> 0.59$) levels rising in parallel. Depth lifts every level too: across $n_"layer" = 1 -> 4$ the root goes $0.22 -> 0.42$, the mid $0.32 -> 0.54$, and the leaf-parent $0.34 -> 0.48$. Number of heads is the weakest axis: from $1$ to $8$ heads the root moves only $0.25 -> 0.36$, the mid $0.37 -> 0.48$, and the leaf-parent level is essentially flat ($0.42 -> 0.44$). 
-
-*Root remains the weakest latent.* At all eleven configs the root ($L_0$) is
-the weakest-decoded level.
-
-*Model depth stretches the build-up and lifts the readout* (@archdepth). Plotting root
-$R^2$ against normalized residual depth (residual index over $n_"layer"$), every model rises from
-$approx 0.01$ at the embedding to its final-layer readout, and deeper models both
-stretch the accumulation curve and reach a higher endpoint: final-layer root $R^2$ is
-$0.22 -> 0.35 -> 0.39 -> 0.42$ for $n_"layer" = $ 1 to 4, respectively.
-
-*Longer training has less effect on leaves decodability than on other latents.* Quadrupling the training budget
-($4000 -> 16000$ steps) lifts the root by $+0.05$ ($0.35 -> 0.41$) and the mid level by
-$+0.05$ ($0.48 -> 0.53$), but the leaf-parent level by only $+0.02$ ($0.44 -> 0.47$).
-
-*Decodability decouples from loss fit* (@archlossfit). Across all 99 runs the
-correlation between `loss_gap_closed` and probe $R^2$ is modest — $0.46$ for the root,
-$0.42$ for the mid, $0.17$ for the leaf-parent, and the scatter is wide. A model
-can reach near-Bayes loss without linearly representing the coarse belief, and vice
-versa #todooleg[interesting].
-
-#fig("figures/arch_marginal_r2.png",
-  [Marginal capacity effects. Each panel varies one axis with the other three at
-   baseline; points are root ($L_0$), mid ($L_1$), and leaf-parent ($L_2$) probe
-   $R^2$, error bars are SEM over 3 grammars $times$ 3 seeds, the dotted line marks the
-   shared baseline. Width and depth lift all levels (root collapses at $n_"embd" = 16$);
-   heads matter least; the root is the lowest level in every panel.], w: 100%)
-  <archmarginal>
-
-#fig("figures/arch_depth_accum.png",
-  [Depth and accumulation. *Left:* root-belief probe $R^2$ vs normalized residual
-   depth, one line per $n_"layer"$ (mean $plus.minus$ SEM over grammars $times$ seeds);
-   every model accumulates from the embedding to its readout, and deeper models reach
-   higher. *Right:* final-layer root $R^2$ rises monotonically with depth.], w: 100%)
-  <archdepth>
-
-#fig("figures/arch_lossfit.png",
-  [Decodability vs loss fit, all 99 runs. Root ($L_0$) and leaf-parent ($L_2$) probe
-   $R^2$ against `loss_gap_closed` (fraction of the uniform$arrow.r$Bayes CE gap
-   closed). Dashed lines are least-squares fits; the wide vertical spread at fixed loss
-   fit shows decodability is not determined by how well the model fit the loss.],
-   w: 82%) <archlossfit>
-
-== Going deeper: $L = 4$
-
-The $L = 3$ tree is shallow enough that the root collapses to certainty within a few
-tokens #todooleg[linkage to ref], compressing the window over which its belief could be seen to bloom. Let's give the *root* more dynamic
-range. 
-This pass increments the tree level, so
-context length becomes $16$, and we deal with *fourth* latent level. 
-Other HRM parameters remain the same. #footnote[($s = 2, v = 8, m = 2$, uniform sampling,
-unambiguous trees)]
-We consider ten *non-isomorphic* grammars and three master seeds again. We vary model depth
-$n_"layer" in {2, 3}$. Overall we make *60 runs* #footnote[`run_depth4.py`, writing
-`results/depth4/g{NN}_L{n}_d128_h4_t4000_s{S}/`, a separate root so the
-depth-agnostic dir names never collide with previous passes)]. 
-These run close
-0.96–0.99 of the uniform#text[→]Bayes loss gap (mean $0.99$) and are reported in full in @depth4sanitytable.
-
-
-
-- *All earlier findings replicated at $L = 4$.* Linear decodability growth held (every level is read off well above the shuffled baseline of $approx -0.04$); the belief sharpens with context (exact root posterior entropy falls $1.86 -> 0.00$ monotonically over the 16 positions, @depth4bloom); belief *accumulates across layers* (root probe $R^2$ rises $-0.01 -> 0.07 -> 0.19$ for $n_"layer" = 2$ and $-0.01 -> 0.06 -> 0.17 -> 0.28$ for $n_"layer" = 3$, the deeper model will reach a higher readout, @depth4layer); and causal steering still works (@depth4steer) #todooleg[unclear what is written here].
-
-Root decodability becomes even weaker at $L = 4$ than at $L = 3$: the $n_"layer" = 2$ family mean falls to $0.19$ (from $0.35$ at $L = 3$), and even adding a third layer lifts it only to $0.28$, still below the $L = 3$ value of $0.35$.
-
-
-The extra depth gives the *root specifically* room to bloom. At $L = 3$ the root collapsed
-to certainty within about three tokens, so its own belief barely had a window to expand
-(the $L = 3$ blooming we showed earlier is dominated by the local latents); the longer
-16-position $L = 4$ context stretches that window out. Over it the exact *root* posterior
-entropy decreases smoothly and monotonically from $1.86$ nats to $0$, and the root belief
-readout radius grows overall from $0.18$ to $0.50$ (@depth4bloom). The radius growth is
-noisier than the local latents' — it wobbles in the back half — but the root now visibly
-sharpens with context rather than snapping to certainty.
-
-The per-level gradient takes the inverted U-shape (@depth4levels). Family-mean probe $R^2$ is $L_0 = 0.24$, $L_1 = 0.37$, $L_2 = 0.36$, $L_3 = 0.30$: it *rises* from the root to the mid-levels and then *falls* back toward the leaf-parents. Only $6$ of $60$ runs show the strict $L_0 < L_1 < L_2 < L_3$ ordering. Root remains the weakest decodable latent.
-
-
-#fig("figures/depth4_level_r2.png",
-  [$L = 4$ per-level probe strength across the family. Each point is one of 60 runs
-   (10 grammars $times$ 3 seeds $times$ $n_"layer" in {2, 3}$); violins show the
-   per-level $R^2$ distribution, diamonds the means. The gradient is an *inverted-U* —
-   the mid-levels ($L_1, L_2$) decode strongest, the root ($L_0$) weakest, the
-   leaf-parents ($L_3$) intermediate — not the pre-registered monotone ladder.],
-  w: 82%) <depth4levels>
-
-#fig("figures/depth4_blooming.png",
-  [The root *does* bloom at $L = 4$. *Left:* the root belief readout radius grows with
-   context position $k$ over the 16-position window (grey: 60 runs; orange: mean),
-   though non-monotonically in the back half. *Right:* the exact root posterior entropy
-   decreases smoothly and monotonically from $1.86$ nats to $0$.], w: 100%) <depth4bloom>
-
-#fig("figures/depth4_layer_r2.png",
-  [Belief accumulates across layers at $L = 4$. Root-belief probe $R^2$ vs residual
-   index, one line per $n_"layer"$ (mean $plus.minus$ SD over 30 runs each). Both archs
-   rise monotonically from the embedding to the readout; the 3-layer model reaches a
-   higher endpoint ($0.28$ vs $0.19$).], w: 70%) <depth4layer>
-
-#fig("figures/depth4_steering.png",
-  [Causal steering replicates at $L = 4$. *Left:* steering the layer-1 residual toward
-   a *wrong* latent collapses the true next token's log-probability in every run
-   (grey), mean in orange. *Right:* the collapse magnitude ($alpha{=}0 -> alpha{=}4$)
-   across the 60 runs: $6.6 plus.minus 0.5$ nats.], w: 100%) <depth4steer>
 
 = Engineering non-collapsing belief geometry
 
@@ -713,6 +554,179 @@ used. Pre-registered predictions held in three of four cases, and the one miss �
 root probe than predicted — turned out to be a feature of the hierarchy rather than a
 failure of the belief-geometry hypothesis. The exact, enumerable setting turns a qualitative
 interpretability story into quantitative, falsifiable measurement.
+
+= Appendix: Robustness studies <appendix-robustness>
+
+== Generalization across grammars
+
+The results above come from a single grammar #footnote[`grammar = 0`] and a single training
+run. To test whether they are properties of the RHM *family* under the same fixed
+constraints #footnote[Reminder: fixed constraints so far are ($s=2$, $L=3$, $v=8$, $m=2$, uniform unambiguous rules)] rather than
+artifacts of one rule draw, we sweep the content of the rule table#footnote[See the example (first tried grammar) rule table at @ruletable] across ten
+independently sampled grammars with three replicate
+training seeds each, resulting in 30 runs. 
+We have ensured that the sampled grammars aren't isomorpic by post-factum ensuring that the respective nodes adjacency tables are not equivalent up to a per-level symbol permutation. #footnote[Test code in `grammar_iso.py`]
+The model architecture / training code remained the same as in previous experiments. 
+#footnote[Reminder: model architecture so far: GPT-2-style transformer, 2 layers of 4 attn heads each, hidden size 128, 4k train steps. A single master seed
+controls model initialisation, training-data sampling, probe sampling, and the
+probe split, so replicates measure end-to-end sampling variance. Each run writes a
+deterministic, self-contained directory
+(`results/sweep/g{NN}_L2_d128_h4_s{S}/`) holding its grammar, a `config.json`
+manifest (resolved config, git SHA, timestamp), and per-run metrics — recoverable
+for this paper independent of any experiment-tracker. ]. 
+
+
+- *All grammars train to near-Bayes.* Every run closes $0.82–0.93\%$ of the uniform to Bayes-optimal loss gap (mean $0.89 plus.minus 0.03$), in line with the initial observation. The runs details can be seen in @sanitytable.
+
+- *The root remains the weakest-decoded level* (@sweeplevels). Pooling probe $R^2$ by tree level, the root ($L_0$) averages $0.35 plus.minus 0.07$ (range $0.24$–$0.48$), well below the mid ($L_1$, mean $0.50$) and leaf-parent ($L_2$, mean $0.49$) latents. The deepest level shows the widest spread (one grammar dips slightly negative #todooleg[investigate; not a failed training. poor train-test split?]) #todooleg[node-level
+rule structure matters most for the most local latents?].
+
+- *Blooming and belief-sharpening alongside context hold for every grammar* (@sweepbloom). The exact posterior entropy falls with context position $k$ in all ten grammars, and the belief readout's radius grows with context.
+
+- *Causal steering replicates with a stable effect size* (@sweepsteer). Steering the layer-1 residual toward a wrong latent collapses the true next token's mean log-probability in every run: as the patch strength $alpha$ increases from $0$ to $4$, that log-probability drops by $6.9 plus.minus 0.5$ nats (mean $plus.minus$ SD across the 30 runs), with low run-to-run variance.
+
+In short, all four earlier findings -- poor root decodability, blooming, layer-wise
+accumulation (recomputed in every run's per-layer probe), and causal steering --
+replicate across the grammar family.
+
+
+#fig("figures/sweep_level_r2.png",
+  [The inverted strength gradient replicates across the grammar family. Each point
+   is one of 30 runs (10 grammars $times$ 3 seeds); violins show the per-level
+   distribution of probe $R^2$, diamonds the means. The root ($L_0$) is the
+   weakest-decoded level ($0.35 plus.minus 0.07$), below the mid ($L_1$) and
+   leaf-parent ($L_2$) latents ($approx 0.49$–$0.50$).], w: 82%) <sweeplevels>
+
+#fig("figures/sweep_blooming.png",
+  [Blooming is family-wide. *Left:* the belief readout's mean radius grows with
+   context position $k$ (one line per grammar, averaged over seeds). *Right:* the
+   exact posterior entropy falls with $k$ for every grammar.],
+  w: 100%) <sweepbloom>
+
+#fig("figures/sweep_steering.png", 
+  [Causal steering replicates with a stable effect size. *Left:* steering the
+   layer-1 residual toward a *wrong* latent collapses the true next token's
+   log-probability in every run (grey lines), mean in orange. *Right:* the
+   distribution of the collapse magnitude (grey violin, orange diamond = mean) — the drop in
+   the true token's mean log-probability as $alpha{=}0 -> alpha{=}4$ — across all 30 runs:
+   $6.9 plus.minus 0.5$ nats.],
+  w: 100%) <sweepsteer>
+
+== Architecture dependence
+
+The grammar sweep fixes the architecture and varies the data; this section does the opposite. 
+Again, we keep the RHM constraints. 
+We vary the transformer's capacity one axis at a time around the baseline. We consider (in bold are baseline params) $n_"layer"$ in {1, *2*, 3, 4}, $n_"embd"$ in {16, 64, *128*, 256}, $n_"head"$ in {1, 2, *4*, 8}, and training $"steps"$ in {*4000*, 16000}. \
+Each axis varies independently with the other three pinned at baseline, the baseline being their common center. Every config is run across `grammar` $in {0, 1, 2}$
+and `seed` $in {0, 1, 2}$ from grammar sweep, *99 runs total* #footnote[`run_arch.py` , writing
+steps-disambiguated dirs `results/arch/g{NN}_L{n}_d{d}_h{h}_t{steps}_s{S}/`)]. 
+Small models are *expected* to underfit. 
+
+
+*Model capacity lifts decodability, with a low-width floor* (@archmarginal). Width is the strongest lever, across $n_"embd" = 16 -> 256$ the root probe $R^2$ climbs monotonically (from being undecodable at 16): $0.07 -> 0.21 -> 0.35 -> 0.44$, with the mid ($0.12 -> 0.57$) and leaf-parent ($0.15 -> 0.59$) levels rising in parallel. Depth lifts every level too: across $n_"layer" = 1 -> 4$ the root goes $0.22 -> 0.42$, the mid $0.32 -> 0.54$, and the leaf-parent $0.34 -> 0.48$. Number of heads is the weakest axis: from $1$ to $8$ heads the root moves only $0.25 -> 0.36$, the mid $0.37 -> 0.48$, and the leaf-parent level is essentially flat ($0.42 -> 0.44$). 
+
+*Root remains the weakest latent.* At all eleven configs the root ($L_0$) is
+the weakest-decoded level.
+
+*Model depth stretches the build-up and lifts the readout* (@archdepth). Plotting root
+$R^2$ against normalized residual depth (residual index over $n_"layer"$), every model rises from
+$approx 0.01$ at the embedding to its final-layer readout, and deeper models both
+stretch the accumulation curve and reach a higher endpoint: final-layer root $R^2$ is
+$0.22 -> 0.35 -> 0.39 -> 0.42$ for $n_"layer" = $ 1 to 4, respectively.
+
+*Longer training has less effect on leaves decodability than on other latents.* Quadrupling the training budget
+($4000 -> 16000$ steps) lifts the root by $+0.05$ ($0.35 -> 0.41$) and the mid level by
+$+0.05$ ($0.48 -> 0.53$), but the leaf-parent level by only $+0.02$ ($0.44 -> 0.47$).
+
+*Decodability decouples from loss fit* (@archlossfit). Across all 99 runs the
+correlation between `loss_gap_closed` and probe $R^2$ is modest — $0.46$ for the root,
+$0.42$ for the mid, $0.17$ for the leaf-parent, and the scatter is wide. A model
+can reach near-Bayes loss without linearly representing the coarse belief, and vice
+versa #todooleg[interesting].
+
+#fig("figures/arch_marginal_r2.png",
+  [Marginal capacity effects. Each panel varies one axis with the other three at
+   baseline; points are root ($L_0$), mid ($L_1$), and leaf-parent ($L_2$) probe
+   $R^2$, error bars are SEM over 3 grammars $times$ 3 seeds, the dotted line marks the
+   shared baseline. Width and depth lift all levels (root collapses at $n_"embd" = 16$);
+   heads matter least; the root is the lowest level in every panel.], w: 100%)
+  <archmarginal>
+
+#fig("figures/arch_depth_accum.png",
+  [Depth and accumulation. *Left:* root-belief probe $R^2$ vs normalized residual
+   depth, one line per $n_"layer"$ (mean $plus.minus$ SEM over grammars $times$ seeds);
+   every model accumulates from the embedding to its readout, and deeper models reach
+   higher. *Right:* final-layer root $R^2$ rises monotonically with depth.], w: 100%)
+  <archdepth>
+
+#fig("figures/arch_lossfit.png",
+  [Decodability vs loss fit, all 99 runs. Root ($L_0$) and leaf-parent ($L_2$) probe
+   $R^2$ against `loss_gap_closed` (fraction of the uniform$arrow.r$Bayes CE gap
+   closed). Dashed lines are least-squares fits; the wide vertical spread at fixed loss
+   fit shows decodability is not determined by how well the model fit the loss.],
+   w: 82%) <archlossfit>
+
+== Going deeper: $L = 4$
+
+The $L = 3$ tree is shallow enough that the root collapses to certainty within a few
+tokens #todooleg[linkage to ref], compressing the window over which its belief could be seen to bloom. Let's give the *root* more dynamic
+range. 
+This pass increments the tree level, so
+context length becomes $16$, and we deal with *fourth* latent level. 
+Other HRM parameters remain the same. #footnote[($s = 2, v = 8, m = 2$, uniform sampling,
+unambiguous trees)]
+We consider ten *non-isomorphic* grammars and three master seeds again. We vary model depth
+$n_"layer" in {2, 3}$. Overall we make *60 runs* #footnote[`run_depth4.py`, writing
+`results/depth4/g{NN}_L{n}_d128_h4_t4000_s{S}/`, a separate root so the
+depth-agnostic dir names never collide with previous passes)]. 
+These run close
+0.96–0.99 of the uniform#text[→]Bayes loss gap (mean $0.99$) and are reported in full in @depth4sanitytable.
+
+
+
+- *All earlier findings replicated at $L = 4$.* Linear decodability growth held (every level is read off well above the shuffled baseline of $approx -0.04$); the belief sharpens with context (exact root posterior entropy falls $1.86 -> 0.00$ monotonically over the 16 positions, @depth4bloom); belief *accumulates across layers* (root probe $R^2$ rises $-0.01 -> 0.07 -> 0.19$ for $n_"layer" = 2$ and $-0.01 -> 0.06 -> 0.17 -> 0.28$ for $n_"layer" = 3$, the deeper model will reach a higher readout, @depth4layer); and causal steering still works (@depth4steer) #todooleg[unclear what is written here].
+
+Root decodability becomes even weaker at $L = 4$ than at $L = 3$: the $n_"layer" = 2$ family mean falls to $0.19$ (from $0.35$ at $L = 3$), and even adding a third layer lifts it only to $0.28$, still below the $L = 3$ value of $0.35$.
+
+
+The extra depth gives the *root specifically* room to bloom. At $L = 3$ the root collapsed
+to certainty within about three tokens, so its own belief barely had a window to expand
+(the $L = 3$ blooming we showed earlier is dominated by the local latents); the longer
+16-position $L = 4$ context stretches that window out. Over it the exact *root* posterior
+entropy decreases smoothly and monotonically from $1.86$ nats to $0$, and the root belief
+readout radius grows overall from $0.18$ to $0.50$ (@depth4bloom). The radius growth is
+noisier than the local latents' — it wobbles in the back half — but the root now visibly
+sharpens with context rather than snapping to certainty.
+
+The per-level gradient takes the inverted U-shape (@depth4levels). Family-mean probe $R^2$ is $L_0 = 0.24$, $L_1 = 0.37$, $L_2 = 0.36$, $L_3 = 0.30$: it *rises* from the root to the mid-levels and then *falls* back toward the leaf-parents. Only $6$ of $60$ runs show the strict $L_0 < L_1 < L_2 < L_3$ ordering. Root remains the weakest decodable latent.
+
+
+#fig("figures/depth4_level_r2.png",
+  [$L = 4$ per-level probe strength across the family. Each point is one of 60 runs
+   (10 grammars $times$ 3 seeds $times$ $n_"layer" in {2, 3}$); violins show the
+   per-level $R^2$ distribution, diamonds the means. The gradient is an *inverted-U* —
+   the mid-levels ($L_1, L_2$) decode strongest, the root ($L_0$) weakest, the
+   leaf-parents ($L_3$) intermediate — not the pre-registered monotone ladder.],
+  w: 82%) <depth4levels>
+
+#fig("figures/depth4_blooming.png",
+  [The root *does* bloom at $L = 4$. *Left:* the root belief readout radius grows with
+   context position $k$ over the 16-position window (grey: 60 runs; orange: mean),
+   though non-monotonically in the back half. *Right:* the exact root posterior entropy
+   decreases smoothly and monotonically from $1.86$ nats to $0$.], w: 100%) <depth4bloom>
+
+#fig("figures/depth4_layer_r2.png",
+  [Belief accumulates across layers at $L = 4$. Root-belief probe $R^2$ vs residual
+   index, one line per $n_"layer"$ (mean $plus.minus$ SD over 30 runs each). Both archs
+   rise monotonically from the embedding to the readout; the 3-layer model reaches a
+   higher endpoint ($0.28$ vs $0.19$).], w: 70%) <depth4layer>
+
+#fig("figures/depth4_steering.png",
+  [Causal steering replicates at $L = 4$. *Left:* steering the layer-1 residual toward
+   a *wrong* latent collapses the true next token's log-probability in every run
+   (grey), mean in orange. *Right:* the collapse magnitude (grey violin, orange diamond =
+   mean) for $alpha{=}0 -> alpha{=}4$ across the 60 runs: $6.6 plus.minus 0.5$ nats.],
+  w: 100%) <depth4steer>
 
 = Appendix: Root reconstruction diagnostics <appendix-root-reconstruction>
 

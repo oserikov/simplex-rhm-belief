@@ -151,7 +151,8 @@ def fig_steering():
         curves.append(w)
         collapse.append(float(w[0] - w[-1]))
     curves = np.array(curves)
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4.8))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5.4),
+                           gridspec_kw={"width_ratios": [1.55, 1]})
     for c in curves:
         ax[0].plot(alphas, c, "-", color="0.7", lw=0.7, alpha=0.5)
     ax[0].plot(alphas, curves.mean(0), "-o", color=CB[3], lw=2.5, label="mean")
@@ -159,8 +160,13 @@ def fig_steering():
     ax[0].set_ylabel("mean log p(true next token)")
     ax[0].set_title("Corrupting the belief breaks prediction\n(every L=4 run)")
     ax[0].legend()
-    sns.violinplot(y=collapse, ax=ax[1], inner="box", cut=0, color=CB[0])
-    sns.stripplot(y=collapse, ax=ax[1], color="0.2", size=4, alpha=0.7)
+    # match sweep_level_r2 style: grey violin body, jittered points, orange diamond mean
+    sns.violinplot(y=collapse, ax=ax[1], inner=None, cut=0, color="0.85", linewidth=1)
+    sns.stripplot(y=collapse, ax=ax[1], color=CB[0], size=5, alpha=0.75, jitter=0.08)
+    ax[1].plot(0, np.mean(collapse), "D", color=CB[3], markersize=10, label="mean")
+    ax[1].legend()
+    pad = 0.2 * (np.max(collapse) - np.min(collapse) + 1e-9)
+    ax[1].set_ylim(np.min(collapse) - pad, np.max(collapse) + pad)
     ax[1].set_ylabel(f"log p(true) collapse  (α=0 → α={alphas[-1]:.0f})")
     ax[1].set_title("Steering effect size across the L=4 family")
     plt.tight_layout()
