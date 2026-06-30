@@ -507,6 +507,7 @@ context, encodes the whole latent hierarchy (local latents most strongly), and i
 used. 
 
 #set heading(supplement: "Appendix")
+#counter(heading).update(0)
 
 = Appendix: Robustness studies <appendix-robustness>
 
