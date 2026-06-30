@@ -96,7 +96,8 @@
 = Introduction
 
 Natural data is hierarchical: characters compose into words, words into phrases, phrases
-into meaning. The Random Hierarchy Model (RHM) of Cagnetta et al. abstracts this into a
+into meaning. The Random Hierarchy Model (RHM) of #cite(<cagnetta2025>, form: "prose")
+abstracts this into a
 clean synthetic grammar — a fixed tree in which each high-level symbol expands, via random
 production rules, into a fixed-length string of lower-level symbols, down to observed
 leaves. Predicting the next leaf optimally requires inferring the distribution over the
@@ -356,97 +357,34 @@ We grade each pre-registered prediction honestly against the outcome (@scorecard
     result). Three of four held; the lone miss is the root-specific $R^2 > 0.5$ magnitude.],
 ) <scorecardtable>
 
-Three of four predictions held cleanly. The single miss is the root $R^2$, which came in at
-0.38 rather than the predicted $> 0.5$. We take this as a genuine and informative negative:
-the prediction was correct in *form* (linear, above baseline, growing with depth and
-context) but our magnitude estimate for the *root specifically* was optimistic. The
-latent-level sweep — which we did not pre-specify — explains why: the root is the coarsest,
-least locally-predictive latent, and the threshold we predicted is in fact met by every
-deeper latent in the hierarchy. None of the pre-registered failure modes (degenerate
-collapse, non-linear-only encoding, MAP-only encoding, flat-with-depth) materialized; in
-particular MAP root-class accuracy is only 0.47 while full-simplex $R^2$ is positive and
-graded, ruling out a MAP-only representation.
+Three of four predictions held cleanly. The single miss is the root $R^2$, which came in at 0.38 rather than the predicted $> 0.5$. We take this as a genuine and informative negative: the prediction was correct in *form* (linear, above baseline, growing with depth and context) but our magnitude estimate for the *root specifically* was optimistic. The latent-level sweep — which we did not pre-specify — explains why: the root is the coarsest, least locally-predictive latent, and the threshold we predicted is in fact met by every deeper latent in the hierarchy. None of the pre-registered failure modes (degenerate collapse, non-linear-only encoding, MAP-only encoding, flat-with-depth) materialized; in particular MAP root-class accuracy is only 0.47 while full-simplex $R^2$ is positive and graded, ruling out a MAP-only representation.
 
 = Engineering non-collapsing belief geometry
 
-Everything so far lives on a tree whose belief, given the full leaf string, collapses
-to *certainty*: with uniform unambiguous rules the eight leaves invert level-by-level
-to exactly one root, so the $k = 8$ posterior is a delta and the belief path runs from
-the prior straight to a simplex vertex. The "interesting" mixing HMMs studied in the
-belief-geometry literature (Shai et al., 2026) behave oppositely — their belief never
-collapses to a single certain state; it instead traces a self-similar, fractal
-(Sierpinski-like) attractor that fills a structured region of the simplex interior,
-approaching the vertices in the limit without ever settling on one — but the RHM has no
-recurrence, so "slow forgetting" has no analog. A possible analog of "the state can't be
-restored"
-is a *non-invertible observation channel*: a grammar where even the full leaf string
-leaves the root uncertain, so the reachable-belief set is a non-trivial attractor in
-the simplex rather than a path to a vertex. This pass asks what it takes to engineer
-that, and whether the linear probe still recovers it.
+Everything so far lives on a tree whose belief, given the full leaf string, collapses to *certainty*: with uniform unambiguous rules the eight leaves invert level-by-level to exactly one root, so the $k = 8$ posterior is a delta and the belief path runs from the prior straight to a simplex vertex. 
+Recently, #cite(<shai2026>, form: "prose") considered another setup: there, for HMMs, belief never collapses to a single certain state. It traces a self-similar, fractal (Sierpinski-like) attractor that fills a structured region of the simplex interior. But RHM has no recurrence, so "slow forgetting" has no analog. 
+A possible analog of "the state can't be restored" is a *non-invertible observation channel*: a grammar where even the full leaf string leaves the root uncertain, so the reachable-belief set is a non-trivial attractor in the simplex rather than a path to a vertex. 
 
-We add two per-level knobs to the grammar (`rhm.py`, both reducing exactly to the
-canonical RHM at their off setting, verified byte-identical). *Ambiguity* $rho$ shares a
-fraction of the $v dot m$ rule entries' child-tuples *across parents* (many-to-one
-leaf#text[→]root structure); $rho in {0, 0.3, 0.6}$. *Skew* draws each parent's
-rule-choice probabilities non-uniform from a Dirichlet with concentration $alpha$:
-`none` is the canonical uniform $1\/m$; `mid` uses $alpha = 1.0$ and `high` uses
-$alpha = 0.2$ (smaller $alpha$ #text[⇒] more peaked, near-deterministic rule choice).
-Both belief propagation and the brute-force reference were generalized to
-*weighted* sum-product using the same probabilities the sampler uses; the BP#text[↔]
-brute-force agreement holds to $2.5 times 10^(-16)$ under both knobs simultaneously. We
-sweep the full $3 times 3$ grid $times$ 3 rule-table draws — *27 runs* at the pinned
-published arch (`run_noncollapse.py`, writing `results/noncollapse/`), with the
-$("none", "none")$ cell reproducing the pass-1 baseline.
+We add two per-level knobs to the grammar (`rhm.py`, both reducing exactly to the canonical RHM at their off setting, verified byte-identical). *Ambiguity* $rho$ shares a fraction of the $v dot m$ rule entries' child-tuples *across parents* (many-to-one leaf#text[→]root structure); $rho in {0, 0.3, 0.6}$. *Skew* draws each parent's rule-choice probabilities non-uniform from a Dirichlet with concentration $alpha$: `none` is the canonical uniform $1\/m$; `mid` uses $alpha = 1.0$ and `high` uses $alpha = 0.2$ (smaller $alpha$ #text[⇒] more peaked, near-deterministic rule choice). Both belief propagation and the brute-force reference were generalized to *weighted* sum-product using the same probabilities the sampler uses; the BP#text[↔] brute-force agreement holds to $2.5 times 10^(-16)$ under both knobs simultaneously. We sweep the full $3 times 3$ grid $times$ 3 rule-table draws — *27 runs* at the pinned published arch (`run_noncollapse.py`, writing `results/noncollapse/`), with the $("none", "none")$ cell reproducing the pass-1 baseline.
 
 
 Mean exact $k = 8$ root-posterior entropy is exactly $0$ at unambiguous setup regardless of the `skew`. It rises monotonically with ambiguity $rho$ growth: $0.00 -> 0.71 -> 1.38$ nats at `skew=none` (@nccurve, left). The full entropy-vs-$k$ trajectory (@nccurve, right) makes the phenomenon legible — at $rho = 0$ the belief collapses cleanly to $0$ by $k = 8$ (the bloom-to-vertex), while at $rho = 0.3$ and $rho = 0.6$ it *plateaus* at a positive floor: a genuine non-collapsing attractor. Higher skew *worsens* the plateau #todooleg[somewhat expected] but never removes it.
 
-*The linear probe, surprisingly, sharpens.* At every cell of the grid the residual stream
-still linearly encodes the (now spread) posterior well above the shuffled-label baseline of
-$approx -0.07$ (@ncheatmap). That baseline is the same probe refit to randomly *permuted*
-labels and scored on held-out data, averaged over the 27 runs — a near-zero (slightly
-negative) "no real signal" reference. The probe did not *degrade* as $rho$ rose: $R^2$
-*rises* with ambiguity, $0.36 -> 0.42 -> 0.53$ at `skew=none`, and the mid- and low-level
-probes rise even more steeply ($L_1: 0.46 -> 0.71$; $L_2: 0.35 -> 0.82$). A delta-collapsed
-posterior is a near-constant target once the context pins it, starved of variance; a
-non-collapsing posterior is a richer, higher-variance, more linearly-structured signal, so
-linear decodability *improves*. The attractor comparison (@ncattractor) confirms it: at
-$rho = 0.6$ the probe readout traces the same structured interior cloud as the exact
-posterior, versus the vertex-bound bloom at $rho = 0$.
-
-
 #fig("figures/noncollapse_curve.png",
-  [Ambiguity, not skew, engineers non-collapse. *Left:* mean exact $k = 8$ root
-   posterior entropy vs ambiguity $rho$, one line per skew (error bars over 3 draws). At
-   $rho = 0$ entropy is exactly $0$ for *every* skew — skew alone does not prevent
-   collapse — and it rises monotonically with $rho$. *Right:* the full entropy-vs-context
-   trajectory at `skew=none`; at $rho = 0$ the belief collapses to $0$ by $k = 8$, at
-   $rho > 0$ it plateaus at a positive floor — a non-collapsing attractor.],
+  [Ambiguity, not skew, engineers non-collapse. *Left:* mean exact $k = 8$ root posterior entropy vs ambiguity $rho$, one line per skew (error bars over 3 draws). At $rho = 0$ entropy is exactly $0$ for *every* skew — skew alone does not prevent collapse — and it rises monotonically with $rho$. *Right:* the full entropy-vs-context trajectory at `skew=none`; at $rho = 0$ the belief collapses to $0$ by $k = 8$, at $rho > 0$ it plateaus at a positive floor — a non-collapsing attractor.],
   w: 100%) <nccurve>
 
+*The linear probe, surprisingly, sharpens.* At every cell of the grid the residual stream still linearly encodes the (now spread) posterior well above the shuffled-label baseline of $approx -0.07$ (@ncheatmap). That baseline is the same probe refit to randomly *permuted* labels and scored on held-out data, averaged over the 27 runs — a near-zero (slightly negative) "no real signal" reference. The probe did not *degrade* as $rho$ rose: $R^2$ *rises* with ambiguity, $0.36 -> 0.42 -> 0.53$ at `skew=none`, and the mid- and low-level probes rise even more steeply ($L_1: 0.46 -> 0.71$; $L_2: 0.35 -> 0.82$). A delta-collapsed posterior is a near-constant target once the context pins it, starved of variance; a non-collapsing posterior is a richer, higher-variance, more linearly-structured signal, so linear decodability *improves*. The attractor comparison (@ncattractor) confirms it: at $rho = 0.6$ the probe readout traces the same structured interior cloud as the exact posterior, versus the vertex-bound bloom at $rho = 0$.
+
+
+
+
 #fig("figures/noncollapse_heatmap.png",
-  [The linear probe survives ambiguity and skew, and *sharpens* with ambiguity. Per-level
-   probe $R^2$ (root $L_0$, mid $L_1$, low $L_2$) over the $3 times 3$ skew $times$
-   ambiguity grid; each cell is mean $plus.minus$ SD over 3 rule-table draws, against a
-   shuffled baseline of $approx -0.07$. $R^2$ rises left-to-right (with $rho$) at every
-   level. The single dark $L_2$ cell at $("mid", rho{=}0)$ is a near-deterministic-target
-   instability, not a decodability failure.],
+  [The linear probe survives ambiguity and skew, and *sharpens* with ambiguity. Per-level   probe $R^2$ (root $L_0$, mid $L_1$, low $L_2$) over the $3 times 3$ skew $times$   ambiguity grid; each cell is mean $plus.minus$ SD over 3 rule-table draws, against a   shuffled baseline of $approx -0.07$. $R^2$ rises left-to-right (with $rho$) at every   level. The single dark $L_2$ cell at $("mid", rho{=}0)$ is a near-deterministic-target   instability, not a decodability failure.],
   w: 100%) <ncheatmap>
 
 #fig("figures/noncollapse_attractor.png",
-  [Exact posterior (left column) and linear-probe readout (right column) in belief-PCA,
-   colored by context position $k$ — marker size and opacity grow with $k$ (the last token
-   is largest and fully opaque, earlier context dimmed) so the endpoint of each trajectory
-   stands out — for the uniform corner $rho = 0$ (top) and the high-ambiguity corner
-   $rho = 0.6$ (bottom). Open black circles mark the eight certainty / simplex vertices
-   (one-hot roots) and the red #sym.plus the uniform prior,
-   both projected into the panel's own basis (the circles are hollow so the points landing
-   inside them stay visible). Because root-class labels are not aligned
-   across grammars, each row keeps its *native* belief-PCA basis and axis limits are shared
-   only *within* a row; the vertex markers give the label-agnostic reference. At $rho = 0$
-   the late-context beliefs land *on* the vertices (collapse to certainty); at $rho = 0.6$
-   they stay in an interior cloud near the prior, *off* the vertices (non-collapse) — and
-   the probe readout occupies the same region as the exact posterior.],
+  [Exact posterior and linear-probe readout after PCA, colored by context position $k$ for the uniform corner $rho = 0$ and the high-ambiguity corner $rho = 0.6$. At $rho = 0$ the late-context exact beliefs land *on* the vertices (due to collapse to certainty), which is not always the case at $rho = 0.6$. Probe readouts occupy rougly same regions as their counterpart posteriors, with uncertaincy case readouts being more aligned with the exact posterior. (For vizualization purposes, shown data is from one single run).],
   w: 90%) <ncattractor>
 
 
@@ -454,57 +392,17 @@ posterior, versus the vertex-bound bloom at $rho = 0$.
 
 = Discussion and limitations
 
-The picture is coherent: a tiny transformer trained to near-Bayes-optimal loss on a
-hierarchical grammar carries a *partial* linear image of the posterior over the grammar's
-hidden latents in its residual stream — fuzzy for the coarse root ($R^2 = 0.38$), sharper
-for the local latents ($R^2$ up to 0.66). That image is assembled additively across
-layers, blooms from the prior toward the vertices as evidence accumulates, spans the full
-latent hierarchy, and is causally relied upon at generation time. We probe against an
-*exactly known* belief state (computed by belief propagation, not approximated), which is
-what lets us quantify the recovery as partial rather than merely assert it — but the
-linear recovery itself is imperfect, and we do not claim the probe reconstructs the
-posterior exactly. This reproduces the core Simplex belief-geometry phenomenology in a
-setting where the ground-truth belief state is known exactly.
+The picture is coherent: a tiny transformer trained to near-Bayes-optimal loss on a hierarchical grammar carries a *partial* linear image of the posterior over the grammar's hidden latents in its residual stream — fuzzy for the coarse root ($R^2 = 0.38$), sharper for the local latents ($R^2$ up to 0.66). That image is assembled additively across layers, blooms from the prior toward the vertices as evidence accumulates, spans the full latent hierarchy, and is causally relied upon at generation time. We probe against an *exactly known* belief state (computed by belief propagation, not approximated), which is what lets us quantify the recovery as partial rather than merely assert it — but the linear recovery itself is imperfect, and we do not claim the probe reconstructs the posterior exactly. This reproduces the core Simplex belief-geometry phenomenology in a setting where the ground-truth belief state is known exactly.
 
-Methodologically, this paper sits between the two reference points in the bibliography:
-Cagnetta et al.'s RHM study uses the same hierarchical data model but evaluates the
-last-token prediction setting, while Shai et al.'s *Transformers learn factored
-representations* motivates pooling predictive vectors across contexts. Our readout follows
-the latter all-context-position spirit, treating every prefix position as a belief state to
-be decoded, while keeping Cagnetta et al.'s exact RHM grammar as the data source.
+Methodologically, this paper sits between the two reference points in the bibliography: #cite(<cagnetta2025>, form: "prose")'s RHM study uses the same hierarchical data model but evaluates the last-token prediction setting, while #cite(<shai2026>, form: "prose")'s *Transformers learn factored representations* motivates pooling predictive vectors across contexts. Our readout follows the latter all-context-position spirit, treating every prefix position as a belief state to be decoded, while keeping #cite(<cagnetta2025>, form: "prose")'s exact RHM grammar as the data source.
 
-The most interesting wrinkle is the *inverted strength gradient*: the global root, the
-spec's nominal target, is the hardest latent to decode, while local near-leaf latents are
-read off most cleanly. This is intuitive in hindsight — next-token prediction rewards
-representing whatever is most locally predictive — but it sharpens the belief-geometry
-claim: the residual stream tracks the *full* latent posterior, weighted toward what the
-task needs, not a single privileged variable.
+The most interesting wrinkle is the *inverted strength gradient*: the global root, the spec's nominal target, is the hardest latent to decode, while local near-leaf latents are read off most cleanly. This is intuitive in hindsight — next-token prediction rewards representing whatever is most locally predictive — but it sharpens the belief-geometry claim: the residual stream tracks the *full* latent posterior, weighted toward what the task needs, not a single privileged variable.
 
-*Limitations.* (i) The grammar is deliberately tiny and fully enumerable ($s=2$, $L=3$,
-1024 trees); this is what makes the beliefs exact and the verification airtight, but it
-leaves open how the geometry scales to larger, non-enumerable RHMs. (ii) At $L=3$ the root
-posterior collapses to certainty by $k=3$ on many strings, compressing the dynamic range
-over which blooming is visible for the root; the spec anticipated this and suggested $L=4$
-as a follow-up. (iii) The strongly-negative mid-layer probe cells indicate the affine probe
-is locally mis-specified at some position/layer combinations; a per-position or
-whitened probe would tighten these estimates. (iv) Steering is applied at a single layer
-(layer 1) along a mean-difference axis; a learned causal direction and a layer sweep would
-strengthen the causal claim. (v) The detailed pass-1 figures
-(@simplex–@steering) are from a single training run and grammar draw; the
-grammar-sweep and architecture-sweep sections quantify how the *headline* metrics
-move across 10 grammars / 3 seeds and across 11 capacity configs / 3 grammars /
-3 seeds respectively, but the architecture sweep is one-axis-at-a-time (no
-$n_"layer" times n_"embd" times n_"head"$ interaction cells). The $L = 4$ section
-extends the family one tree level deeper; still-larger grammars ($L >= 5$, larger $v$,
-$m > 2$), where brute-force belief verification becomes intractable, remain a future
-pass.
+*Limitations.* (i) The grammar is deliberately tiny and fully enumerable ($s=2$, $L=3$, 1024 trees); this is what makes the beliefs exact and the verification airtight, but it leaves open how the geometry scales to larger, non-enumerable RHMs. (ii) At $L=3$ the root posterior collapses to certainty by $k=3$ on many strings, compressing the dynamic range over which blooming is visible for the root; the spec anticipated this and suggested $L=4$ as a follow-up. (iii) The strongly-negative mid-layer probe cells indicate the affine probe is locally mis-specified at some position/layer combinations; a per-position or whitened probe would tighten these estimates. (iv) Steering is applied at a single layer (layer 1) along a mean-difference axis; a learned causal direction and a layer sweep would strengthen the causal claim. (v) The detailed pass-1 figures (@simplex–@steering) are from a single training run and grammar draw; the grammar-sweep and architecture-sweep sections quantify how the *headline* metrics move across 10 grammars / 3 seeds and across 11 capacity configs / 3 grammars / 3 seeds respectively, but the architecture sweep is one-axis-at-a-time (no $n_"layer" times n_"embd" times n_"head"$ interaction cells). The $L = 4$ section extends the family one tree level deeper; still-larger grammars ($L >= 5$, larger $v$, $m > 2$), where brute-force belief verification becomes intractable, remain a future pass.
 
 = Conclusion
 
-On an exactly-solvable hierarchical grammar, a small transformer's residual stream is a
-linear image of the exact Bayesian belief simplex: it accumulates across depth, blooms with
-context, encodes the whole latent hierarchy (local latents most strongly), and is causally
-used. 
+On an exactly-solvable hierarchical grammar, a small transformer's residual stream is a linear image of the exact Bayesian belief simplex: it accumulates across depth, blooms with context, encodes the whole latent hierarchy (local latents most strongly), and is causally used. 
 
 #set heading(supplement: "Appendix")
 #counter(heading).update(0)
@@ -515,21 +413,7 @@ used.
 
 == Generalization across grammars
 
-The results above come from a single grammar #footnote[`grammar = 0`] and a single training
-run. To test whether they are properties of the RHM *family* under the same fixed
-constraints #footnote[Reminder: fixed constraints so far are ($s=2$, $L=3$, $v=8$, $m=2$, uniform unambiguous rules)] rather than
-artifacts of one rule draw, we sweep the content of the rule table#footnote[See the example (first tried grammar) rule table at @ruletable] across ten
-independently sampled grammars with three replicate
-training seeds each, resulting in 30 runs. 
-We have ensured that the sampled grammars aren't isomorpic by post-factum ensuring that the respective nodes adjacency tables are not equivalent up to a per-level symbol permutation. #footnote[Test code in `grammar_iso.py`]
-The model architecture / training code remained the same as in previous experiments. 
-#footnote[Reminder: model architecture so far: GPT-2-style transformer, 2 layers of 4 attn heads each, hidden size 128, 4k train steps. A single master seed
-controls model initialisation, training-data sampling, probe sampling, and the
-probe split, so replicates measure end-to-end sampling variance. Each run writes a
-deterministic, self-contained directory
-(`results/sweep/g{NN}_L2_d128_h4_s{S}/`) holding its grammar, a `config.json`
-manifest (resolved config, git SHA, timestamp), and per-run metrics — recoverable
-for this paper independent of any experiment-tracker. ]. 
+The results above come from a single grammar #footnote[`grammar = 0`] and a single training run. To test whether they are properties of the RHM *family* under the same fixed constraints #footnote[Reminder: fixed constraints so far are ($s=2$, $L=3$, $v=8$, $m=2$, uniform unambiguous rules)] rather than artifacts of one rule draw, we sweep the content of the rule table#footnote[See the example (first tried grammar) rule table at @ruletable] across ten independently sampled grammars with three replicate training seeds each, resulting in 30 runs.  We have ensured that the sampled grammars aren't isomorpic by post-factum ensuring that the respective nodes adjacency tables are not equivalent up to a per-level symbol permutation. #footnote[Test code in `grammar_iso.py`] The model architecture / training code remained the same as in previous experiments.  #footnote[Reminder: model architecture so far: GPT-2-style transformer, 2 layers of 4 attn heads each, hidden size 128, 4k train steps. A single master seed controls model initialisation, training-data sampling, probe sampling, and the probe split, so replicates measure end-to-end sampling variance. Each run writes a deterministic, self-contained directory (`results/sweep/g{NN}_L2_d128_h4_s{S}/`) holding its grammar, a `config.json` manifest (resolved config, git SHA, timestamp), and per-run metrics — recoverable for this paper independent of any experiment-tracker. ]. 
 
 
 - *All grammars train to near-Bayes.* Every run closes $0.82–0.93\%$ of the uniform to Bayes-optimal loss gap (mean $0.89 plus.minus 0.03$), in line with the initial observation. The runs details can be seen in @sanitytable.
@@ -541,9 +425,7 @@ rule structure matters most for the most local latents?].
 
 - *Causal steering replicates with a stable effect size* (@sweepsteer). Steering the layer-1 residual toward a wrong latent collapses the true next token's mean log-probability in every run: as the patch strength $alpha$ increases from $0$ to $4$, that log-probability drops by $6.9 plus.minus 0.5$ nats (mean $plus.minus$ SD across the 30 runs), with low run-to-run variance.
 
-In short, all four earlier findings -- poor root decodability, blooming, layer-wise
-accumulation (recomputed in every run's per-layer probe), and causal steering --
-replicate across the grammar family.
+In short, all four earlier findings -- poor root decodability, blooming, layer-wise accumulation (recomputed in every run's per-layer probe), and causal steering -- replicate across the grammar family.
 
 
 #fig("figures/sweep_level_r2.png",
@@ -833,11 +715,9 @@ entropy; `eff_dim`/`hull_area` the reachable-set descriptors. Loaded directly fr
 = References
 
 #set par(justify: false)
+#bibliography("references.yml", title: none, style: "american-psychological-association")
+
 #text(size: 9.5pt)[
-  Cagnetta, F., Favero, A., Sclocchi, A., and Wyart, M. (2025). *Scaling Laws and
-  Representation Learning in Simple Hierarchical Languages: Transformers vs. Convolutional
-  Architectures*. arXiv:2505.07070. \
-  Shai, A. et al. (2026). *Transformers learn factored representations*. arXiv:2602.02385. \
   Project sources: `spec.md`, `spec-grammar-sweep.md`, `PREREGISTRATION.md`,
   `EXECUTION_OUTPUT.md`, `results/analysis.json`, `results/root_reconstruction.json`,
   `artifacts/train_summary.json`. Grammar sweep: `sweep.py`, `sweep.yaml`,

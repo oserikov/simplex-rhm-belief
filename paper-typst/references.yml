@@ -1,0 +1,30 @@
+cagnetta2025:
+  type: article
+  title: "Scaling Laws and Representation Learning in Simple Hierarchical Languages: Transformers vs. Convolutional Architectures"
+  author:
+    - "Cagnetta, Francesco"
+    - "Favero, Alessandro"
+    - "Sclocchi, Antonio"
+    - "Wyart, Matthieu"
+  date: 2025
+  serial-number:
+    arxiv: "2505.07070"
+  url: "https://arxiv.org/abs/2505.07070"
+
+shai2026:
+  type: article
+  title: "Transformers learn factored representations"
+  author:
+    - "Shai, Adam"
+    - "Amdahl-Culleton, Loren"
+    - "Christensen, Casper L."
+    - "Bigelow, Henry R."
+    - "Rosas, Fernando E."
+    - "Boyd, Alexander B."
+    - "Alt, Eric A."
+    - "Ray, Kyle J."
+    - "Riechers, Paul M."
+  date: 2026
+  serial-number:
+    arxiv: "2602.02385"
+  url: "https://arxiv.org/abs/2602.02385"
