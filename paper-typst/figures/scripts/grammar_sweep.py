@@ -119,7 +119,8 @@ def fig_steering():
         curves.append(w)
         collapse.append(float(w[0] - w[-1]))  # drop in log p(true) at max alpha
     curves = np.array(curves)
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4.8))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5.4),
+                           gridspec_kw={"width_ratios": [1.55, 1]})
     for c in curves:
         ax[0].plot(alphas, c, "-", color="0.7", lw=0.8, alpha=0.6)
     ax[0].plot(alphas, curves.mean(0), "-o", color=sns.color_palette("colorblind")[3],
@@ -128,9 +129,13 @@ def fig_steering():
     ax[0].set_ylabel("mean log p(true next token)")
     ax[0].set_title("Corrupting the belief breaks prediction\n(every run)")
     ax[0].legend()
-    sns.violinplot(y=collapse, ax=ax[1], inner="box", cut=0,
-                   color=sns.color_palette("colorblind")[0])
-    sns.stripplot(y=collapse, ax=ax[1], color="0.2", size=4, alpha=0.7)
+    # unfilled violin body (outline only) + box + jittered points; give Y room
+    sns.violinplot(y=collapse, ax=ax[1], inner="box", cut=0, fill=False,
+                   linecolor=sns.color_palette("colorblind")[0], linewidth=1.6)
+    sns.stripplot(y=collapse, ax=ax[1], color=sns.color_palette("colorblind")[0],
+                  size=5, alpha=0.8, jitter=0.12)
+    pad = 0.15 * (np.max(collapse) - np.min(collapse) + 1e-9)
+    ax[1].set_ylim(np.min(collapse) - pad, np.max(collapse) + pad)
     ax[1].set_ylabel(f"log p(true) collapse  (α=0 → α={alphas[-1]:.0f})")
     ax[1].set_title("Steering effect size across grammars")
     plt.tight_layout()
