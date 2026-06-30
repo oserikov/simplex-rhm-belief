@@ -178,11 +178,11 @@ def fig_attractor():
     for r, (sk, am, title) in enumerate(corners):
         exact, readout, pos, verts, prior, d = _readout(_corner(sk, am))
         # marker size: exponential, end-loaded growth so the LAST token dominates --
-        # k=d is ~3x wider (~9x area) than k=1, growth accelerating toward the end.
-        size = 10.0 * 9.0 ** ((pos - 1) / (d - 1))
+        # k=d is ~2x wider (~4x area) than k=1, growth accelerating toward the end.
+        size = 10.0 * 4.0 ** ((pos - 1) / (d - 1))
         # alpha: dim the early/middle context (k<=6), bring out the last two tokens
-        # (k=7 a quarter under full, k=8 full opacity).
-        alpha = np.where(pos <= 6, 0.5, np.where(pos == 7, 0.75, 1.0))
+        # (k=7 at 0.3, k=8 at 0.375).
+        alpha = np.where(pos <= 6, 0.25, np.where(pos == 7, 0.3, 0.375))
         norm = plt.Normalize(1, d)
         order = np.argsort(pos)  # draw high-k last so the last token sits on top
         # shared limits WITHIN the row (exact & readout share this basis); framed on
@@ -206,7 +206,7 @@ def fig_attractor():
             a.set_xlabel("belief PC1"); a.set_ylabel("belief PC2")
             a.set_title(f"{lab}\n{title}", fontsize=11)
             if r == 0 and c == 0:
-                a.legend(loc="upper left", fontsize=8, framealpha=0.9)
+                a.legend(loc="upper right", fontsize=8, framealpha=0.9)
             sm = plt.cm.ScalarMappable(norm=norm, cmap="viridis"); sm.set_array([])
             fig.colorbar(sm, ax=a, label="context position k")
     fig.tight_layout()

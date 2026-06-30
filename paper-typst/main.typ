@@ -150,7 +150,7 @@ parent takes one of the two listed child pairs uniformly.
     [`S7`], [`[S4, S7]` or `[S1, S1]`], [`[S3, S8]` or `[S4, S1]`], [`[S4, S6]` or `[S3, S2]`],
     [`S8`], [`[S2, S2]` or `[S5, S7]`], [`[S1, S2]` or `[S8, S3]`], [`[S5, S7]` or `[S3, S6]`],
   ),
-  caption: [Frozen level-specific grammar sampled once before training. Top, middle, and bottom columns correspond to `rules_0`, `rules_1`, and `rules_2` in `artifacts/grammar.npz`.],
+  caption: [Frozen level-specific grammar sampled once before training. Top, middle, and bottom columns correspond to `rules_0`, `rules_1`, and `rules_2` in `artifacts/grammar.npz` (see visualized in appendix @appendix-ruletable).],
 ) <ruletable>
 
 *Exact posterior.* Given a leaf prefix of length $k$, the posterior over any hidden latent
@@ -714,6 +714,20 @@ ambiguity explains part, but not all, of the fuzzy root reconstruction.
   [All but last symbol], [7], [$249 / 400 = 62.25%$], [$380 / 400 = 95.00%$],
   [Full sequence], [8], [$282 / 400 = 70.50%$], [$400 / 400 = 100.00%$],
 )
+
+= Appendix: The rule table as a graph <appendix-ruletable>
+
+@ruletable lists the frozen grammar as text, three columns of `or`-separated child
+pairs. The same information is easier to scan as a graph: four columns of eight nodes
+(root, level 1, level 2, leaves), each parent's two rules drawn as two distinctly
+colored pairs of arrows into the level below. No edge skips a level, which is the
+"no cross-level ambiguity" property by construction.
+
+#fig("figures/ruletable_graph.png",
+  [The frozen rule table of @ruletable redrawn as a DAG. Each of the eight symbols
+   `S1`-`S8` appears once per level; its two production rules are drawn in two
+   distinct colors (one per rule), chosen so that neither a node's own two colors
+   nor neighboring nodes' colors are easily confused.], w: 100%) <ruletablegraph>
 
 = Appendix: Per-run grammar-sweep sanity table <appendix-sanity>
 

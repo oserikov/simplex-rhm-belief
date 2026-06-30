@@ -46,10 +46,6 @@ ax.set_title("Local latents are generally more strongly encoded")
 for i, v in enumerate(vals):
     ax.annotate(f"{v:.2f}", (i, v), textcoords="offset points",
                 xytext=(0, 6), ha="center", fontsize=10)
-ax.annotate("spec's primary target", xy=(0, vals[0]), xytext=(0.55, 0.20),
-            fontsize=10, color=base[3],
-            arrowprops=dict(arrowstyle="->", color=base[3], lw=1.5))
-
 plt.tight_layout()
 out = os.path.join(OUTDIR, "latent_levels.png")
 plt.savefig(out)
