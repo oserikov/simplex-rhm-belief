@@ -269,7 +269,7 @@ decode, likely because it is the most abstract thus least locally predictive.
   w: 72%)
   <latents>
 
-This "deeper decodes stronger" reading is *refined* once the tree is one level taller.
+*An important refinement based on robustness studies (@appendix-robustness).* This "deeper decodes stronger" reading is *refined* once the tree is one level taller.
 Scaling the identical per-level probe to $L = 4$ (the depth study in @depth4levels) shows the
 gradient is really an *inverted U*: the mid-level latents decode strongest, while *both* the
 coarse root and the most-local leaf-parents fall off. The headline is not "local beats global"
@@ -435,68 +435,19 @@ posterior, versus the vertex-bound bloom at $rho = 0$.
 
 #fig("figures/noncollapse_attractor.png",
   [Exact posterior (left column) and linear-probe readout (right column) in belief-PCA,
-   colored by context position, for the uniform corner $rho = 0$ (top) and the
-   high-ambiguity corner $rho = 0.6$ (bottom). At $rho = 0$ the late-context beliefs
-   reach the simplex vertices (bloom-to-certainty); at $rho = 0.6$ they form a structured
-   interior cloud — the non-collapsing attractor — which the probe readout traces.],
-  w: 86%) <ncattractor>
+   colored by context position $k$ (marker size grows with $k$), for the uniform corner
+   $rho = 0$ (top) and the high-ambiguity corner $rho = 0.6$ (bottom). Black #sym.times are
+   the eight certainty vertices (one-hot roots) and the red #sym.plus is the uniform prior,
+   both projected into the panel's own basis. Because root-class labels are not aligned
+   across grammars, each row keeps its *native* belief-PCA basis and axis limits are shared
+   only *within* a row; the vertex markers give the label-agnostic reference. At $rho = 0$
+   the late-context beliefs land *on* the vertices (collapse to certainty); at $rho = 0.6$
+   they stay in an interior cloud near the prior, *off* the vertices (non-collapse) — and
+   the probe readout occupies the same region as the exact posterior.],
+  w: 90%) <ncattractor>
 
 
 
-The next step is not to make this RHM larger for its own sake, but to relax the assumption
-that makes it exactly solvable: the fixed tree. The present grammar is a finite,
-depth-limited PCFG whose hidden trees can be enumerated exactly. For $v = 8$, $s = 2$,
-$L = 3$, and $m = 2$, the tree has $1 + 2 + 4 = 7$ internal rule choices. Conditional on
-a root, this gives $2^7 = 128$ hidden trees; across the eight roots it gives
-$8 dot 128 = 1024$ total trees, and under the unambiguous-rule constraint these map
-one-to-one to leaf strings. The linguistic analogy is limited: a depth-3 binary RHM
-resembles a stylized binary phrase-structure grammar in branching structure, while
-attested grammars vary in depth, arity, vocabulary distribution, and rule multiplicity.
-
-The fixed topology is the benchmark's strength. It lets us run exact sum-product BP,
-enumerate all trees, count level-wise statistics cleanly, and avoid PCFG properness and
-normalization problems. It also removes parsing. Once the tree can vary in shape or depth,
-the learner must infer structure as well as symbols: inside-outside, Earley/Stolcke, or
-other chart parsers replace the fixed-tree BP pass. With unbounded recursion, the
-predictive state may require an unbounded stack and a countably infinite family of chart
-configurations. This is the real boundary between the current experiment and syntax-like
-recursion.
-
-Cross that boundary gradually. Cap a recursive PCFG at a fixed depth so inference stays
-bounded. Keep the vocabulary small ($q = v = 8$), keep binary rules, reuse the same
-categories across depths, and impose a hard maximum derivation depth $D_"max"$. Train the
-same scale of decoder transformer, alongside an LSTM and a stack-augmented baseline, on
-shallow depths and test on deeper held-out depths. First run a Dyck-style bracket
-experiment to test stack tracking without lexical ambiguity. Compare the structures
-directly: right-branching or tail-recursive grammars should stress memory differently from
-center-embedded grammars, even when length, category inventory, and depth cap are matched.
-
-This extension lets us compare HMM beliefs with grammar beliefs. In an HMM, the exact
-belief state is a point in a simplex over hidden states. In the fixed-tree RHM, the
-analogous object is the prefix-conditioned collection of BP node marginals and messages.
-The full joint belief over hidden trees is exponential, but the marginal targets have far
-fewer dimensions. In the $L = 3$ grammar, all node marginals occupy at most
-$7 dot (8 - 1) = 49$ coordinates; the ancestor path relevant to a particular next leaf
-occupies about $3 dot (8 - 1) = 21$. In a recursive PCFG, the natural targets become chart
-beliefs instead: span/category marginals and rule/split marginals computed by
-inside-outside inference.
-
-The falsifiable question is not which metaphor fits, but what belief object the model
-linearizes. Does the residual stream encode the exponential joint parse posterior, or a
-factored direct sum of local chart beliefs? If it is factored, do span, category, and
-split beliefs occupy separable or approximately orthogonal subspaces? The fixed-tree
-results suggest a concrete prior: local, prediction-adjacent beliefs may be easier to read
-than the global root. Recursive grammars test whether that inverted strength gradient
-survives when the model must maintain alternative parses instead of filling a known tree
-template.
-
-This program is not a search for fractal geometry in the present RHM. Fixed-depth RHM
-beliefs form a finite set, and bounded recursion remains finite once $D_"max"$ is fixed.
-What the cap can reveal is the deformation of the representation as the allowed stack
-grows: whether linear decodability degrades smoothly, whether chart-like subspaces appear,
-and whether center embedding produces a different geometry from tail recursion. Claims
-about self-similar belief sets require a different regime — non-unifilar processes,
-infinite memory, or genuinely unbounded recursion.
 
 = Discussion and limitations
 
@@ -550,12 +501,11 @@ pass.
 On an exactly-solvable hierarchical grammar, a small transformer's residual stream is a
 linear image of the exact Bayesian belief simplex: it accumulates across depth, blooms with
 context, encodes the whole latent hierarchy (local latents most strongly), and is causally
-used. Pre-registered predictions held in three of four cases, and the one miss — a weaker
-root probe than predicted — turned out to be a feature of the hierarchy rather than a
-failure of the belief-geometry hypothesis. The exact, enumerable setting turns a qualitative
-interpretability story into quantitative, falsifiable measurement.
+used. 
 
 = Appendix: Robustness studies <appendix-robustness>
+
+#todoai[summarize these studies and main findings in a paragraph.]
 
 == Generalization across grammars
 

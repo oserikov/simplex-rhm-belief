@@ -153,30 +153,54 @@ def _corner(skew, amb):
 
 
 def _readout(run_dir):
+    """Belief-PCA of a run, in ITS OWN basis (root-class labels are not aligned
+    across grammars, so each corner keeps its native basis). Returns the exact and
+    probe-readout clouds, context position, and the 8 certainty-vertices + uniform
+    prior projected into the same basis as absolute, label-agnostic references."""
     data = np.load(os.path.join(run_dir, "probe_data.npz"))
     hidden, beliefs = data["hidden"], data["beliefs"]  # (N,Lr,d,v_embd),(N,d,v)
     N, nL, d, ne = hidden.shape
+    V = beliefs.shape[-1]
     Xf = hidden[:, nL - 1].reshape(N * d, ne)
-    Y = beliefs.reshape(N * d, -1)
+    Y = beliefs.reshape(N * d, V)
     pos = np.tile(np.arange(1, d + 1), N)
     probe = LinearRegression().fit(Xf, Y)
-    pca = PCA(n_components=2).fit(Y)
-    return pca.transform(Y), pca.transform(probe.predict(Xf)), pos
+    pca = PCA(n_components=2, random_state=0).fit(Y)
+    verts = pca.transform(np.eye(V))                       # the 8 one-hot vertices
+    prior = pca.transform(np.full((1, V), 1.0 / V))[0]     # uniform prior
+    return pca.transform(Y), pca.transform(probe.predict(Xf)), pos, verts, prior, d
 
 
 def fig_attractor():
-    corners = [("none", 0.0, "Uniform unambiguous (ρ=0): bloom to vertices"),
-               ("none", 0.6, "High ambiguity (ρ=0.6): non-collapsing attractor")]
+    corners = [("none", 0.0, "Uniform unambiguous (ρ=0): collapses onto the vertices"),
+               ("none", 0.6, "High ambiguity (ρ=0.6): stays in an interior cloud")]
     fig, ax = plt.subplots(2, 2, figsize=(12, 11))
     for r, (sk, am, title) in enumerate(corners):
-        exact, readout, pos = _readout(_corner(sk, am))
+        exact, readout, pos, verts, prior, d = _readout(_corner(sk, am))
+        # marker size grows with context: k=1 -> base, k=d -> 2*base (late points
+        # are pale yellow and otherwise hard to see)
+        size = 13 * (1 + (pos - 1) / (d - 1))
+        # shared limits WITHIN the row (exact & readout share this basis); framed on
+        # the exact cloud + vertices so the corners are always in view.
+        ref = np.vstack([exact, verts])
+        (x0, y0), (x1, y1) = ref.min(0), ref.max(0)
+        px, py = 0.08 * (x1 - x0), 0.08 * (y1 - y0)
         for c, (coords, lab) in enumerate([(exact, "exact posterior"),
                                            (readout, "probe readout")]):
-            sc = ax[r, c].scatter(coords[:, 0], coords[:, 1], c=pos, cmap="viridis",
-                                  s=12, alpha=0.6)
-            ax[r, c].set_xlabel("belief PC1"); ax[r, c].set_ylabel("belief PC2")
-            ax[r, c].set_title(f"{lab}\n{title}", fontsize=11)
-            fig.colorbar(sc, ax=ax[r, c], label="context position k")
+            a = ax[r, c]
+            sc = a.scatter(coords[:, 0], coords[:, 1], c=pos, cmap="viridis",
+                           s=size, alpha=0.6, edgecolors="none", vmin=1, vmax=d)
+            a.scatter(verts[:, 0], verts[:, 1], marker="X", s=150, c="black",
+                      edgecolors="white", linewidths=1.3, zorder=6,
+                      label="certainty vertices")
+            a.scatter([prior[0]], [prior[1]], marker="P", s=130, c="crimson",
+                      edgecolors="white", linewidths=1.0, zorder=6, label="uniform prior")
+            a.set_xlim(x0 - px, x1 + px); a.set_ylim(y0 - py, y1 + py)
+            a.set_xlabel("belief PC1"); a.set_ylabel("belief PC2")
+            a.set_title(f"{lab}\n{title}", fontsize=11)
+            if r == 0 and c == 0:
+                a.legend(loc="upper left", fontsize=8, framealpha=0.9)
+            fig.colorbar(sc, ax=a, label="context position k")
     fig.tight_layout()
     p = os.path.join(OUTDIR, "noncollapse_attractor.png")
     fig.savefig(p); plt.close(fig); return p
