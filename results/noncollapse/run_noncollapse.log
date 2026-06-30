@@ -1,0 +1,110 @@
+
+=== run_noncollapse start 2026-06-30T15:16:12 ===
+[1/27] skew=none amb=0(none) draw=0 start 15:16:12
+FINAL test_loss=0.8900 (uniform 2.0794, optimal 0.7253)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=none)
+DONE g00_L2_d128_h4_t4000_s0: root_r2=0.3002 deepest_r2=0.5039 loss_gap_closed=0.8784 (27s)  (31s)
+[2/27] skew=none amb=0(none) draw=1 start 15:16:42
+FINAL test_loss=0.8494 (uniform 2.0794, optimal 0.7199)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=none)
+DONE g01_L2_d128_h4_t4000_s0: root_r2=0.3578 deepest_r2=0.5504 loss_gap_closed=0.9047 (27s)  (30s)
+[3/27] skew=none amb=0(none) draw=2 start 15:17:12
+FINAL test_loss=0.8447 (uniform 2.0794, optimal 0.7544)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=none)
+DONE g02_L2_d128_h4_t4000_s0: root_r2=0.4262 deepest_r2=0.0083 loss_gap_closed=0.9319 (26s)  (29s)
+[4/27] skew=none amb=0.3(mid) draw=0 start 15:17:41
+FINAL test_loss=0.6930 (uniform 2.0794, optimal 0.6221)
+non-collapse: k=8 root entropy=0.7598 eff_dim=5.313 hull_area=0.6421 (rho=0.3 skew=none)
+DONE sknone_am0.3_g00_L2_d128_h4_t4000_s0: root_r2=0.4455 deepest_r2=0.6512 loss_gap_closed=0.9513 (27s)  (30s)
+[5/27] skew=none amb=0.3(mid) draw=1 start 15:18:11
+FINAL test_loss=0.7216 (uniform 2.0794, optimal 0.6509)
+non-collapse: k=8 root entropy=0.6576 eff_dim=5.535 hull_area=0.5416 (rho=0.3 skew=none)
+DONE sknone_am0.3_g01_L2_d128_h4_t4000_s0: root_r2=0.4274 deepest_r2=0.6417 loss_gap_closed=0.9505 (28s)  (31s)
+[6/27] skew=none amb=0.3(mid) draw=2 start 15:18:42
+FINAL test_loss=0.7397 (uniform 2.0794, optimal 0.6660)
+non-collapse: k=8 root entropy=0.7003 eff_dim=5.477 hull_area=0.5762 (rho=0.3 skew=none)
+DONE sknone_am0.3_g02_L2_d128_h4_t4000_s0: root_r2=0.3771 deepest_r2=0.5869 loss_gap_closed=0.9479 (30s)  (33s)
+[7/27] skew=none amb=0.6(high) draw=0 start 15:19:16
+FINAL test_loss=0.5011 (uniform 2.0794, optimal 0.4860)
+non-collapse: k=8 root entropy=1.3969 eff_dim=3.724 hull_area=0.6400 (rho=0.6 skew=none)
+DONE sknone_am0.6_g00_L2_d128_h4_t4000_s0: root_r2=0.5640 deepest_r2=0.7615 loss_gap_closed=0.9905 (33s)  (37s)
+[8/27] skew=none amb=0.6(high) draw=1 start 15:19:52
+FINAL test_loss=0.5658 (uniform 2.0794, optimal 0.5448)
+non-collapse: k=8 root entropy=1.3457 eff_dim=3.302 hull_area=0.5520 (rho=0.6 skew=none)
+DONE sknone_am0.6_g01_L2_d128_h4_t4000_s0: root_r2=0.6170 deepest_r2=0.9018 loss_gap_closed=0.9863 (34s)  (37s)
+[9/27] skew=none amb=0.6(high) draw=2 start 15:20:29
+FINAL test_loss=0.5328 (uniform 2.0794, optimal 0.4976)
+non-collapse: k=8 root entropy=1.4068 eff_dim=2.788 hull_area=0.4318 (rho=0.6 skew=none)
+DONE sknone_am0.6_g02_L2_d128_h4_t4000_s0: root_r2=0.4220 deepest_r2=0.7826 loss_gap_closed=0.9778 (34s)  (37s)
+[10/27] skew=mid amb=0(none) draw=0 start 15:21:06
+FINAL test_loss=0.8921 (uniform 2.0794, optimal 0.5366)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=mid)
+DONE skmid_am0_g00_L2_d128_h4_t4000_s0: root_r2=0.3287 deepest_r2=0.3964 loss_gap_closed=0.7696 (33s)  (37s)
+[11/27] skew=mid amb=0(none) draw=1 start 15:21:43
+FINAL test_loss=1.0199 (uniform 2.0794, optimal 0.5468)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=mid)
+DONE skmid_am0_g01_L2_d128_h4_t4000_s0: root_r2=0.3799 deepest_r2=0.5137 loss_gap_closed=0.6913 (35s)  (38s)
+[12/27] skew=mid amb=0(none) draw=2 start 15:22:21
+FINAL test_loss=1.1025 (uniform 2.0794, optimal 0.5426)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=mid)
+DONE skmid_am0_g02_L2_d128_h4_t4000_s0: root_r2=0.3549 deepest_r2=-7.4713 loss_gap_closed=0.6357 (34s)  (37s)
+[13/27] skew=mid amb=0.3(mid) draw=0 start 15:22:58
+FINAL test_loss=0.6272 (uniform 2.0794, optimal 0.4867)
+non-collapse: k=8 root entropy=0.6537 eff_dim=4.877 hull_area=0.5921 (rho=0.3 skew=mid)
+DONE skmid_am0.3_g00_L2_d128_h4_t4000_s0: root_r2=0.4159 deepest_r2=0.5595 loss_gap_closed=0.9118 (33s)  (37s)
+[14/27] skew=mid amb=0.3(mid) draw=1 start 15:23:35
+FINAL test_loss=0.6823 (uniform 2.0794, optimal 0.4995)
+non-collapse: k=8 root entropy=0.3870 eff_dim=5.829 hull_area=0.6014 (rho=0.3 skew=mid)
+DONE skmid_am0.3_g01_L2_d128_h4_t4000_s0: root_r2=0.4557 deepest_r2=0.6656 loss_gap_closed=0.8843 (33s)  (36s)
+[15/27] skew=mid amb=0.3(mid) draw=2 start 15:24:11
+FINAL test_loss=0.6325 (uniform 2.0794, optimal 0.5326)
+non-collapse: k=8 root entropy=0.7169 eff_dim=5.255 hull_area=0.7321 (rho=0.3 skew=mid)
+DONE skmid_am0.3_g02_L2_d128_h4_t4000_s0: root_r2=0.3626 deepest_r2=0.6025 loss_gap_closed=0.9354 (33s)  (36s)
+[16/27] skew=mid amb=0.6(high) draw=0 start 15:24:48
+FINAL test_loss=0.5376 (uniform 2.0794, optimal 0.4261)
+non-collapse: k=8 root entropy=1.1605 eff_dim=4.342 hull_area=0.5354 (rho=0.6 skew=mid)
+DONE skmid_am0.6_g00_L2_d128_h4_t4000_s0: root_r2=0.5044 deepest_r2=0.8028 loss_gap_closed=0.9326 (33s)  (37s)
+[17/27] skew=mid amb=0.6(high) draw=1 start 15:25:24
+FINAL test_loss=0.6313 (uniform 2.0794, optimal 0.5088)
+non-collapse: k=8 root entropy=0.9423 eff_dim=3.837 hull_area=0.6337 (rho=0.6 skew=mid)
+DONE skmid_am0.6_g01_L2_d128_h4_t4000_s0: root_r2=0.3874 deepest_r2=0.6770 loss_gap_closed=0.9220 (34s)  (37s)
+[18/27] skew=mid amb=0.6(high) draw=2 start 15:26:01
+FINAL test_loss=0.5529 (uniform 2.0794, optimal 0.4420)
+non-collapse: k=8 root entropy=1.0470 eff_dim=4.031 hull_area=0.4432 (rho=0.6 skew=mid)
+DONE skmid_am0.6_g02_L2_d128_h4_t4000_s0: root_r2=0.4711 deepest_r2=0.7901 loss_gap_closed=0.9323 (618s)  (622s)
+[19/27] skew=high amb=0(none) draw=0 start 15:36:23
+FINAL test_loss=1.1915 (uniform 2.0794, optimal 0.2818)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=high)
+DONE skhigh_am0_g00_L2_d128_h4_t4000_s0: root_r2=0.2369 deepest_r2=0.4214 loss_gap_closed=0.4939 (27s)  (31s)
+[20/27] skew=high amb=0(none) draw=1 start 15:36:54
+FINAL test_loss=0.8751 (uniform 2.0794, optimal 0.3953)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=high)
+DONE skhigh_am0_g01_L2_d128_h4_t4000_s0: root_r2=0.2492 deepest_r2=0.4202 loss_gap_closed=0.7151 (30s)  (34s)
+[21/27] skew=high amb=0(none) draw=2 start 15:37:28
+FINAL test_loss=1.0670 (uniform 2.0794, optimal 0.2532)
+non-collapse: k=8 root entropy=0.0000 eff_dim=6.965 hull_area=0.6465 (rho=0.0 skew=high)
+DONE skhigh_am0_g02_L2_d128_h4_t4000_s0: root_r2=0.2983 deepest_r2=0.3542 loss_gap_closed=0.5544 (32s)  (36s)
+[22/27] skew=high amb=0.3(mid) draw=0 start 15:38:03
+FINAL test_loss=0.9041 (uniform 2.0794, optimal 0.2118)
+non-collapse: k=8 root entropy=0.2655 eff_dim=5.633 hull_area=0.5984 (rho=0.3 skew=high)
+DONE skhigh_am0.3_g00_L2_d128_h4_t4000_s0: root_r2=0.3115 deepest_r2=0.5997 loss_gap_closed=0.6293 (28s)  (31s)
+[23/27] skew=high amb=0.3(mid) draw=1 start 15:38:35
+FINAL test_loss=0.3135 (uniform 2.0794, optimal 0.1622)
+non-collapse: k=8 root entropy=0.3314 eff_dim=4.909 hull_area=0.6720 (rho=0.3 skew=high)
+DONE skhigh_am0.3_g01_L2_d128_h4_t4000_s0: root_r2=0.4511 deepest_r2=0.5639 loss_gap_closed=0.9211 (30s)  (33s)
+[24/27] skew=high amb=0.3(mid) draw=2 start 15:39:08
+FINAL test_loss=0.6246 (uniform 2.0794, optimal 0.2468)
+non-collapse: k=8 root entropy=0.4441 eff_dim=4.795 hull_area=0.6780 (rho=0.3 skew=high)
+DONE skhigh_am0.3_g02_L2_d128_h4_t4000_s0: root_r2=0.3783 deepest_r2=0.5344 loss_gap_closed=0.7938 (27s)  (31s)
+[25/27] skew=high amb=0.6(high) draw=0 start 15:39:38
+FINAL test_loss=0.3267 (uniform 2.0794, optimal 0.1826)
+non-collapse: k=8 root entropy=0.5852 eff_dim=3.720 hull_area=0.6501 (rho=0.6 skew=high)
+DONE skhigh_am0.6_g00_L2_d128_h4_t4000_s0: root_r2=0.5202 deepest_r2=0.6840 loss_gap_closed=0.9241 (29s)  (32s)
+[26/27] skew=high amb=0.6(high) draw=1 start 15:40:10
+FINAL test_loss=0.2625 (uniform 2.0794, optimal 0.2101)
+non-collapse: k=8 root entropy=0.6123 eff_dim=3.651 hull_area=0.7863 (rho=0.6 skew=high)
+DONE skhigh_am0.6_g01_L2_d128_h4_t4000_s0: root_r2=0.5496 deepest_r2=0.8281 loss_gap_closed=0.9720 (29s)  (32s)
+[27/27] skew=high amb=0.6(high) draw=2 start 15:40:43
+FINAL test_loss=0.2848 (uniform 2.0794, optimal 0.2101)
+non-collapse: k=8 root entropy=0.4243 eff_dim=2.820 hull_area=0.6248 (rho=0.6 skew=high)
+DONE skhigh_am0.6_g02_L2_d128_h4_t4000_s0: root_r2=0.5612 deepest_r2=0.7040 loss_gap_closed=0.9601 (30s)  (33s)

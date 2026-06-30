@@ -1,0 +1,22 @@
+{
+  "pred1_ambiguity_noncollapse_monotone": true,
+  "k8_entropy_skewnone_by_rho": {
+    "0.0": 0.0,
+    "0.3": 0.705916961034139,
+    "0.6": 1.3831576506296794
+  },
+  "pred2_skew_only_stays_collapsed": true,
+  "k8_entropy_rho0_by_skew": {
+    "none": 0.0,
+    "mid": 0.0,
+    "high": 0.0
+  },
+  "pred3_probe_above_shuffled_everywhere": true,
+  "pred3_root_r2_degrades_with_rho": false,
+  "root_r2_skewnone_by_rho": {
+    "0.0": 0.3614332296506291,
+    "0.3": 0.416670608830404,
+    "0.6": 0.5343524623938164
+  },
+  "n_runs": 27
+}
