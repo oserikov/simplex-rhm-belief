@@ -41,8 +41,14 @@ RHM_FIXED = dict(s=2, L=3, v=8, m=2)
 
 
 def run_dir_name(cfg: SimpleNamespace) -> str:
-    return (f"g{cfg.grammar:02d}_L{cfg.n_layer}_d{cfg.n_embd}"
+    base = (f"g{cfg.grammar:02d}_L{cfg.n_layer}_d{cfg.n_embd}"
             f"_h{cfg.n_head}_t{cfg.steps}_s{cfg.seed}")
+    # pass-5: tag non-default grammar knobs so noncollapse cells get distinct dirs
+    skew = getattr(cfg, "skew", "none")
+    amb = getattr(cfg, "ambiguity", 0.0)
+    if skew != "none" or amb > 0:
+        base = f"sk{skew}_am{amb:g}_{base}"
+    return base
 
 
 def git_sha() -> str:
@@ -63,6 +69,7 @@ def build_train_args(cfg: SimpleNamespace) -> SimpleNamespace:
         s=RHM_FIXED["s"], L=getattr(cfg, "rhm_L", RHM_FIXED["L"]),
         v=RHM_FIXED["v"], m=RHM_FIXED["m"],
         grammar_seed=cfg.grammar, seed=cfg.seed,
+        ambiguity=getattr(cfg, "ambiguity", 0.0), skew=getattr(cfg, "skew", "none"),
         n_layer=cfg.n_layer, n_embd=cfg.n_embd, n_head=cfg.n_head,
         lr=cfg.lr, steps=cfg.steps, batch_size=cfg.batch_size,
         test_frac=cfg.test_frac, n_probe=cfg.n_probe, log_every=cfg.log_every,
@@ -77,6 +84,10 @@ def resolve_config() -> tuple[SimpleNamespace, bool, object, Path]:
     p = argparse.ArgumentParser()
     p.add_argument("--grammar", type=int, default=0)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--ambiguity", type=float, default=0.0,
+                   help="rho: fraction of rule entries with child-tuples shared across parents")
+    p.add_argument("--skew", type=str, default="none", choices=["none", "mid", "high"],
+                   help="per-parent rule-choice probability skew")
     p.add_argument("--n-layer", type=int, default=2)
     p.add_argument("--n-embd", type=int, default=128)
     p.add_argument("--n-head", type=int, default=4)
@@ -104,6 +115,7 @@ def resolve_config() -> tuple[SimpleNamespace, bool, object, Path]:
     run = None
     cfg_dict = dict(
         grammar=args.grammar, seed=args.seed,
+        ambiguity=args.ambiguity, skew=args.skew,
         n_layer=args.n_layer, n_embd=args.n_embd, n_head=args.n_head,
         lr=args.lr, steps=args.steps, batch_size=args.batch_size,
         test_frac=args.test_frac, n_probe=args.n_probe, log_every=args.log_every,
@@ -148,6 +160,11 @@ def main() -> None:
         "layer_final_r2": analysis["layer_r2"][-1],
         "elapsed_sec": elapsed,
     }
+    if "noncollapse" in analysis:
+        nc = analysis["noncollapse"]
+        metrics["root_entropy_full_context"] = nc["root_entropy_full_context"]
+        metrics["reachable_eff_dim"] = nc["reachable_eff_dim"]
+        metrics["reachable_hull_area"] = nc["reachable_hull_area"]
     for name, r2 in level_r2.items():
         metrics[f"r2_{name}"] = r2
 

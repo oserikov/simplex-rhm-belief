@@ -70,10 +70,52 @@ def test_belief_node_root_consistency():
         assert np.max(np.abs(a - b)) < 1e-9
 
 
+@pytest.mark.parametrize("ambiguity", [0.3, 0.6])
+@pytest.mark.parametrize("skew", ["mid", "high"])
+def test_bp_matches_brute_force_generalized(ambiguity, skew):
+    """Weighted BP == weighted brute force under BOTH ambiguity and skew (<1e-6)."""
+    g = Grammar.random(s=2, L=3, v=8, m=2, seed=1, ambiguity=ambiguity, skew=skew)
+    rng = np.random.default_rng(50)
+    for _ in range(3):
+        x, _ = g.sample(rng)
+        for k in range(1, g.d + 1):
+            assert np.max(np.abs(g.belief_root(x, k) - brute_force_belief_root(g, x, k))) < 1e-6
+            for pos in range(2):
+                bp = g.belief_node(x, k, ell=1, pos=pos)
+                bf = brute_force_belief_node(g, x, k, ell=1, pos=pos)
+                assert np.max(np.abs(bp - bf)) < 1e-6, (k, pos)
+
+
+def test_noncollapse_invariant_and_monotonicity():
+    """rho=0 keeps canonical rules + ~0 full-context entropy; rho>0 raises it."""
+    g0 = Grammar.random(seed=0)
+    g0n = Grammar.random(seed=0, ambiguity=0.0, skew="none")
+    assert all(np.array_equal(a, b) for a, b in zip(g0.rules, g0n.rules, strict=True))
+
+    def mean_full_entropy(amb):
+        g = Grammar.random(seed=0, ambiguity=amb)
+        rng = np.random.default_rng(3)
+        es = [-(b := g.belief_root(g.sample(rng)[0], g.d)) @ np.log(b + 1e-12) for _ in range(40)]
+        return float(np.mean(es))
+
+    e0, e3, e6 = mean_full_entropy(0.0), mean_full_entropy(0.3), mean_full_entropy(0.6)
+    assert e0 < 1e-6 < e3 < e6  # collapse at rho=0, strictly rising with rho
+
+
+def test_weights_sum_to_one():
+    """enumerate_all weights are a proper distribution under skew."""
+    g = Grammar.random(s=2, L=3, v=8, m=2, seed=4, skew="high")
+    _, _, w = g.enumerate_all()
+    assert abs(w.sum() - 1.0) < 1e-9
+    gu = Grammar.random(s=2, L=3, v=8, m=2, seed=4)  # skew=none -> uniform weights
+    _, _, wu = gu.enumerate_all()
+    assert np.allclose(wu, wu[0])
+
+
 def test_tiny_tree_full_posterior():
     """On a tiny tree, full prefix pins the root to a near-one-hot posterior."""
     g = Grammar.random(s=2, L=2, v=4, m=2, seed=1)
-    leaves, roots = g.enumerate_all()
+    leaves, roots, _ = g.enumerate_all()
     x = leaves[0]
     b = g.belief_root(x, g.d)
     bf = brute_force_belief_root(g, x, g.d)

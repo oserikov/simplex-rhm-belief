@@ -38,10 +38,15 @@ FIG = RES / "figures"
 
 
 def load_grammar(art_dir: Path = ART) -> Grammar:
-    d = np.load(Path(art_dir) / "grammar.npz")
+    d = np.load(Path(art_dir) / "grammar.npz", allow_pickle=True)
     L = int(d["L"])
     rules = [d[f"rules_{i}"] for i in range(L)]
-    return Grammar(s=int(d["s"]), L=L, v=int(d["v"]), m=int(d["m"]), rules=rules)
+    # probs/ambiguity/skew present from pass-5 on; older artifacts default to uniform
+    probs = [d[f"probs_{i}"] for i in range(L)] if "probs_0" in d.files else None
+    ambiguity = float(d["ambiguity"]) if "ambiguity" in d.files else 0.0
+    skew = str(d["skew"]) if "skew" in d.files else "none"
+    return Grammar(s=int(d["s"]), L=L, v=int(d["v"]), m=int(d["m"]), rules=rules,
+                   probs=probs, ambiguity=ambiguity, skew=skew)
 
 
 def load_model(g: Grammar, art_dir: Path = ART):
@@ -175,6 +180,32 @@ def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
     ent = np.array([[-np.sum(beliefs[i, t] * np.log(beliefs[i, t] + 1e-12))
                      for t in range(d)] for i in range(N)]).mean(0)
     results["mean_posterior_entropy_by_position"] = ent.tolist()
+
+    # ---- non-collapse quantifiers (pass-5) -----------------------------
+    # Headline: mean exact root-posterior entropy at FULL context k=d. ~0 means the
+    # leaf string inverts to one root (collapse); >0 means irreducible ambiguity.
+    # Reachable-belief spread at k=d: participation-ratio effective dimensionality
+    # and 2D convex-hull area of the exact posteriors in belief-PCA.
+    full = beliefs[:, d - 1, :]  # (N, v) reachable belief set at full context
+    centered = full - full.mean(0)
+    cov_eig = np.clip(np.linalg.eigvalsh(np.cov(centered.T)), 0, None)
+    eff_dim = float((cov_eig.sum() ** 2) / (np.sum(cov_eig ** 2) + 1e-12)) if cov_eig.sum() > 1e-12 else 0.0
+    try:
+        from scipy.spatial import ConvexHull
+        pc2 = PCA(n_components=2).fit_transform(full)
+        hull_area = float(ConvexHull(pc2).volume) if np.ptp(pc2) > 1e-9 else 0.0
+    except Exception:
+        hull_area = 0.0
+    results["noncollapse"] = {
+        "ambiguity": float(getattr(g, "ambiguity", 0.0)),
+        "skew": str(getattr(g, "skew", "none")),
+        "root_entropy_full_context": float(ent[-1]),
+        "reachable_eff_dim": eff_dim,
+        "reachable_hull_area": hull_area,
+    }
+    print(f"non-collapse: k={d} root entropy={ent[-1]:.4f} "
+          f"eff_dim={eff_dim:.3f} hull_area={hull_area:.4f} "
+          f"(rho={getattr(g, 'ambiguity', 0.0)} skew={getattr(g, 'skew', 'none')})")
 
     # ---- blooming: mean readout radius vs context position k -----------
     # radius = RMS spread of the *belief readout* (final-layer linear probe's

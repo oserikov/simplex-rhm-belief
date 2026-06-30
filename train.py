@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from transformers import GPT2Config, GPT2LMHeadModel
 
 from rhm import Grammar
@@ -33,23 +34,31 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 
-def eval_test_loss(model, test_t: torch.Tensor, batch: int = 4096) -> float:
-    """Mean next-token CE over the full test set, chunked to fit in device memory.
+def eval_test_loss(model, test_t: torch.Tensor, weights: np.ndarray | None = None,
+                   batch: int = 4096) -> float:
+    """Next-token CE over the test set, chunked to fit in device memory.
 
-    Equivalent to a single ``model(test_t, labels=test_t).loss`` (mean over all
-    shifted tokens) but evaluated in fixed-size minibatches so the L=4 test set
-    (~52k strings) does not OOM MPS. Every sequence contributes the same number
-    of tokens, so the exact mean is the sequence-count-weighted batch mean.
+    With ``weights=None`` this is the plain mean next-token CE (every sequence has
+    the same token count, so it equals ``model(test_t, labels=test_t).loss``). Under
+    skew the trees are not equiprobable, so ``weights`` (per-sequence generation
+    probability) gives the correct distribution-weighted CE estimate.
     """
     model.eval()
-    total, n = 0.0, 0
+    per_seq = []
     with torch.no_grad():
         for s in range(0, len(test_t), batch):
             chunk = test_t[s:s + batch]
-            loss = model(input_ids=chunk, labels=chunk).loss.item()
-            total += loss * len(chunk)
-            n += len(chunk)
-    return total / n
+            logits = model(input_ids=chunk).logits  # (b, d, v)
+            ce = F.cross_entropy(
+                logits[:, :-1].reshape(-1, logits.shape[-1]),
+                chunk[:, 1:].reshape(-1), reduction="none",
+            ).reshape(chunk.shape[0], -1).mean(1)  # per-sequence mean CE
+            per_seq.append(ce.cpu())
+    per_seq = torch.cat(per_seq).numpy()
+    if weights is None:
+        return float(per_seq.mean())
+    w = weights / weights.sum()
+    return float((per_seq * w).sum())
 
 
 def build_model(g: Grammar, n_layer: int, n_embd: int, n_head: int) -> GPT2LMHeadModel:
@@ -75,23 +84,24 @@ def conditional_entropy_floor(g: Grammar) -> np.ndarray:
     This is the Bayes-optimal next-token loss the model can reach. Uses exact
     enumeration of all trees.
     """
-    leaves, _ = g.enumerate_all()
-    n = len(leaves)
+    leaves, _, weights = g.enumerate_all()  # weights = P(tree), sum to 1
     floor = np.zeros(g.d - 1)
-    # group by prefix to get next-token distributions
+    # group by prefix to get next-token distributions (weighted by tree probability)
     for k in range(1, g.d):
-        # P(next | prefix) from empirical (= exact, equiprobable) over trees
         from collections import defaultdict
 
-        buckets: dict[tuple, list[int]] = defaultdict(list)
-        for row in leaves:
-            buckets[tuple(row[:k].tolist())].append(int(row[k]))
+        nxt: dict[tuple, np.ndarray] = defaultdict(lambda: np.zeros(g.v))
+        pref_mass: dict[tuple, float] = defaultdict(float)
+        for row, w in zip(leaves, weights, strict=True):
+            key = tuple(row[:k].tolist())
+            nxt[key][int(row[k])] += w
+            pref_mass[key] += w
         ent = 0.0
-        for nexts in buckets.values():
-            counts = np.bincount(nexts, minlength=g.v).astype(float)
+        for key, counts in nxt.items():
             p = counts / counts.sum()
-            h = -np.sum(p[p > 0] * np.log(p[p > 0]))
-            ent += (len(nexts) / n) * h
+            nz = p > 0
+            h = -np.sum(p[nz] * np.log(p[nz]))
+            ent += pref_mass[key] * h  # pref_mass[key] = P(prefix)
         floor[k - 1] = ent
     return floor
 
@@ -118,17 +128,22 @@ def train(args, out_dir: Path = ART) -> dict:
     seed_everything(args.seed)
     device = get_device()
     print(f"device={device}")
-    g = Grammar.random(s=args.s, L=args.L, v=args.v, m=args.m, seed=args.grammar_seed)
-    print(f"grammar s={g.s} L={g.L} v={g.v} m={g.m} d={g.d}")
+    g = Grammar.random(s=args.s, L=args.L, v=args.v, m=args.m, seed=args.grammar_seed,
+                       ambiguity=getattr(args, "ambiguity", 0.0),
+                       skew=getattr(args, "skew", "none"))
+    print(f"grammar s={g.s} L={g.L} v={g.v} m={g.m} d={g.d} "
+          f"ambiguity={g.ambiguity} skew={g.skew}")
 
-    # full support of the leaf distribution (equiprobable trees)
-    leaves, roots = g.enumerate_all()
+    # full support of the leaf distribution; weights = P(tree) (uniform iff skew=none)
+    leaves, roots, weights = g.enumerate_all()
     rng = np.random.default_rng(args.seed)
     perm = rng.permutation(len(leaves))
-    leaves, roots = leaves[perm], roots[perm]
+    leaves, roots, weights = leaves[perm], roots[perm], weights[perm]
     n_test = max(1, int(len(leaves) * args.test_frac))
-    test_x = leaves[:n_test]
-    train_x = leaves[n_test:]
+    test_x, test_w = leaves[:n_test], weights[:n_test]
+    train_x, train_w = leaves[n_test:], weights[n_test:]
+    # training samples trees by their true probability (uniform when skew=none)
+    train_p = train_w / train_w.sum()
     print(f"train strings={len(train_x)} test strings={len(test_x)}")
 
     train_t = torch.tensor(train_x, dtype=torch.long)
@@ -147,20 +162,26 @@ def train(args, out_dir: Path = ART) -> dict:
 
     model.train()
     n_train = len(train_t)
+    # sample trees by their generation probability (uniform when skew=none)
+    train_rng = np.random.default_rng(args.seed + 1)
+    uniform_w = bool(np.allclose(train_p, train_p[0]))
     for step in range(args.steps):
-        idx = torch.randint(0, n_train, (args.batch_size,))
-        batch = train_t[idx].to(device)
+        if uniform_w:
+            idx = train_rng.integers(0, n_train, size=args.batch_size)
+        else:
+            idx = train_rng.choice(n_train, size=args.batch_size, p=train_p)
+        batch = train_t[torch.from_numpy(idx)].to(device)
         out = model(input_ids=batch, labels=batch)
         loss = out.loss
         opt.zero_grad()
         loss.backward()
         opt.step()
         if step % args.log_every == 0 or step == args.steps - 1:
-            tl = eval_test_loss(model, test_t)
+            tl = eval_test_loss(model, test_t, weights=test_w)
             model.train()
             print(f"step {step:4d} train_loss={loss.item():.4f} test_loss={tl:.4f}")
 
-    final_test = eval_test_loss(model, test_t)
+    final_test = eval_test_loss(model, test_t, weights=test_w)
     print(f"FINAL test_loss={final_test:.4f} (uniform {uniform_baseline:.4f}, "
           f"optimal {floor.mean():.4f})")
 
@@ -170,8 +191,11 @@ def train(args, out_dir: Path = ART) -> dict:
          "grammar": {"s": g.s, "L": g.L, "v": g.v, "m": g.m, "seed": args.grammar_seed}},
         out_dir / "model.pt",
     )
-    np.savez(out_dir / "grammar.npz", **{f"rules_{i}": r for i, r in enumerate(g.rules)},
-             s=g.s, L=g.L, v=g.v, m=g.m)
+    np.savez(out_dir / "grammar.npz",
+             **{f"rules_{i}": r for i, r in enumerate(g.rules)},
+             **{f"probs_{i}": p for i, p in enumerate(g.probs)},
+             s=g.s, L=g.L, v=g.v, m=g.m,
+             ambiguity=np.float64(g.ambiguity), skew=np.str_(g.skew))
 
     # ---- dump residual activations + exact beliefs for the probe set ----
     # probe set = model-SEEN (train) strings: we measure how the *learned*
@@ -230,6 +254,10 @@ def main() -> None:
     p.add_argument("--m", type=int, default=2)
     p.add_argument("--grammar-seed", type=int, default=0)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--ambiguity", type=float, default=0.0,
+                   help="rho: fraction of rule entries with child-tuples shared across parents")
+    p.add_argument("--skew", type=str, default="none", choices=["none", "mid", "high"],
+                   help="per-parent rule-choice probability skew (Dirichlet concentration)")
     p.add_argument("--n-layer", type=int, default=2)
     p.add_argument("--n-embd", type=int, default=128)
     p.add_argument("--n-head", type=int, default=4)

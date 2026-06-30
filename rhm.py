@@ -27,6 +27,32 @@ from itertools import product
 import numpy as np
 
 
+def _introduce_ambiguity(chosen: np.ndarray, rho: float, rng: np.random.Generator) -> np.ndarray:
+    """Share a fraction ``rho`` of rule entries' child-tuples across parents.
+
+    Starts from the unambiguous (v, m, s) table, then overwrites ``round(rho*v*m)``
+    randomly-chosen entries with a child-tuple copied from an entry belonging to a
+    *different* parent. This makes the child-tuple->parent map many-to-one at a
+    controllable rate (collisions only across parents, never collapsing a parent's
+    own two rules). Generation is unaffected; only decodability changes."""
+    v, m, s = chosen.shape
+    n_entries = v * m
+    n_shared = int(round(rho * n_entries))
+    if n_shared == 0:
+        return chosen
+    flat = chosen.reshape(n_entries, s).copy()
+    parent_of = np.repeat(np.arange(v), m)
+    targets = rng.choice(n_entries, size=n_shared, replace=False)
+    for t in targets:
+        cand = np.flatnonzero(parent_of != parent_of[t])
+        src = cand[rng.integers(len(cand))]
+        flat[t] = flat[src]
+    return flat.reshape(v, m, s)
+
+
+SKEW_ALPHA = {"none": None, "mid": 1.0, "high": 0.2}
+
+
 @dataclass
 class Grammar:
     s: int  # arity
@@ -36,26 +62,54 @@ class Grammar:
     # rules[ell] has shape (v, m, s): child symbols of each (symbol, rule) at
     # parent level ell -> children at level ell+1. ell ranges 0..L-1.
     rules: list[np.ndarray]
+    # probs[ell] has shape (v, m): per-parent rule-choice probability used by BOTH
+    # the sampler and exact BP. Defaults to uniform 1/m (canonical RHM). Non-uniform
+    # = "skew". ``ambiguity`` (rho) and ``skew`` are recorded metadata.
+    probs: list[np.ndarray] | None = None
+    ambiguity: float = 0.0
+    skew: str = "none"
+
+    def __post_init__(self) -> None:
+        if self.probs is None:
+            self.probs = [np.full((self.v, self.m), 1.0 / self.m) for _ in range(self.L)]
 
     @property
     def d(self) -> int:
         return self.s**self.L
 
     @classmethod
-    def random(cls, s: int = 2, L: int = 3, v: int = 8, m: int = 2, seed: int = 0) -> Grammar:
+    def random(cls, s: int = 2, L: int = 3, v: int = 8, m: int = 2, seed: int = 0,
+               ambiguity: float = 0.0, skew: str = "none") -> Grammar:
+        """Sample a (possibly generalized) RHM grammar.
+
+        ``ambiguity`` (rho in [0,1)) shares a fraction of rule entries' child-tuples
+        *across parents* (many-to-one leaf->root structure). ``skew`` draws per-parent
+        rule-choice probabilities non-uniform (``none``/``mid``/``high``). At
+        ``ambiguity=0, skew=none`` the rule table is byte-identical to the canonical
+        unambiguous RHM for the same seed (no extra RNG is consumed)."""
         rng = np.random.default_rng(seed)
         n_tuples = v**s
         if v * m > n_tuples:
-            raise ValueError(f"unambiguity infeasible: v*m={v * m} > v^s={n_tuples}")
+            raise ValueError(f"base rule table infeasible: v*m={v * m} > v^s={n_tuples}")
         all_tuples = np.array(list(product(range(v), repeat=s)), dtype=np.int64)  # (v^s, s)
-        rules = []
+        rules, probs = [], []
+        alpha = SKEW_ALPHA[skew]
         for _ in range(L):
-            # choose v*m distinct tuples, partition into v groups of m -> unambiguous
+            # choose v*m distinct tuples, partition into v groups of m (unambiguous base)
             idx = rng.choice(n_tuples, size=v * m, replace=False)
             chosen = all_tuples[idx].reshape(v, m, s)
+            if ambiguity > 0:
+                chosen = _introduce_ambiguity(chosen, ambiguity, rng)
             rules.append(chosen)
-        g = cls(s=s, L=L, v=v, m=m, rules=rules)
-        g.assert_unambiguous()
+            if alpha is None:
+                p = np.full((v, m), 1.0 / m)
+            else:
+                p = rng.dirichlet(np.full(m, alpha), size=v)  # (v, m), rows sum to 1
+            probs.append(p)
+        g = cls(s=s, L=L, v=v, m=m, rules=rules, probs=probs,
+                ambiguity=float(ambiguity), skew=skew)
+        if ambiguity == 0:
+            g.assert_unambiguous()
         return g
 
     def assert_unambiguous(self) -> None:
@@ -71,8 +125,9 @@ class Grammar:
         latents = [root]
         cur = root
         for ell in range(self.L):
-            choices = rng.integers(self.m, size=cur.shape[0])
-            # rules[ell][symbol, choice] -> (n, s)
+            p = self.probs[ell]  # (v, m)
+            # each node picks one of its m rules with its own (possibly skewed) probs
+            choices = np.array([rng.choice(self.m, p=p[sym]) for sym in cur], dtype=np.int64)
             children = self.rules[ell][cur, choices]  # (n, s)
             cur = children.reshape(-1)
             latents.append(cur)
@@ -84,28 +139,33 @@ class Grammar:
             out[i], _ = self.sample(rng)
         return out
 
-    def enumerate_all(self) -> tuple[np.ndarray, np.ndarray]:
-        """Enumerate every distinct tree (feasible at this scale).
+    def enumerate_all(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Enumerate every tree (feasible at this scale).
 
-        Returns (leaves, roots): leaves (N, d), roots (N,). All trees are
-        equiprobable so this is the exact support of the leaf distribution.
+        Returns (leaves, roots, weights): leaves (N, d), roots (N,), weights (N,)
+        = P(tree) = (1/v) * prod of rule-choice probabilities. Weights sum to 1 and
+        are uniform exactly when skew=none (then this is the equiprobable support of
+        the leaf distribution; under ambiguity, several trees share a leaf string).
         """
-        leaves_list = []
-        roots_list = []
+        leaves_list, roots_list, w_list = [], [], []
         # a tree is determined by (root symbol, rule choice at each internal node)
         n_internal = sum(self.s**ell for ell in range(self.L))
+        prior = 1.0 / self.v
         for root in range(self.v):
             for choices in product(range(self.m), repeat=n_internal):
                 cur = np.array([root], dtype=np.int64)
+                w = prior
                 ci = 0
                 for ell in range(self.L):
                     sel = np.array(choices[ci:ci + cur.shape[0]], dtype=np.int64)
+                    w *= float(np.prod(self.probs[ell][cur, sel]))
                     ci += cur.shape[0]
                     children = self.rules[ell][cur, sel]
                     cur = children.reshape(-1)
                 leaves_list.append(cur)
                 roots_list.append(root)
-        return np.array(leaves_list), np.array(roots_list)
+                w_list.append(w)
+        return np.array(leaves_list), np.array(roots_list), np.array(w_list)
 
     # ---- exact belief propagation --------------------------------------
     def _upward(self, prefix: np.ndarray, k: int) -> dict[tuple[int, int], np.ndarray]:
@@ -130,6 +190,7 @@ class Grammar:
             for pos in range(n_nodes):
                 child_msgs = [mu[(ell + 1, pos * self.s + j)] for j in range(self.s)]
                 # for each symbol a: sum over its m rules of (1/m) prod_j child_msg[j][rule_j]
+                p = self.probs[ell]  # (v, m) rule-choice probs (weighted sum-product)
                 msg = np.zeros(self.v)
                 for a in range(self.v):
                     acc = 0.0
@@ -138,8 +199,8 @@ class Grammar:
                         prod = 1.0
                         for j in range(self.s):
                             prod *= child_msgs[j][rule[j]]
-                        acc += prod
-                    msg[a] = acc / self.m
+                        acc += p[a, ri] * prod
+                    msg[a] = acc
                 mu[(ell, pos)] = msg
         return mu
 
@@ -159,6 +220,7 @@ class Grammar:
         lam: dict[tuple[int, int], np.ndarray] = {(0, 0): np.full(self.v, 1.0 / self.v)}
         for el in range(0, self.L):
             r = self.rules[el]
+            pr = self.probs[el]  # (v, m)
             n_nodes = self.s**el
             for p in range(n_nodes):
                 lam_n = lam[(el, p)]
@@ -172,40 +234,46 @@ class Grammar:
                             for jj in range(self.s):
                                 if jj != j:
                                     prod *= child_msgs[jj][rule[jj]]
-                            out[rule[j]] += lam_n[a] * prod / self.m
+                            out[rule[j]] += lam_n[a] * prod * pr[a, ri]
                     lam[(el + 1, p * self.s + j)] = out
         post = mu[(ell, pos)] * lam[(ell, pos)]
         return post / post.sum()
 
 
 def brute_force_belief_root(g: Grammar, prefix: np.ndarray, k: int) -> np.ndarray:
-    """Reference posterior over root by enumerating all trees consistent with the prefix."""
-    leaves, roots = g.enumerate_all()
+    """Reference posterior over root by enumerating all trees consistent with the prefix.
+
+    Each consistent tree contributes its generation probability (weighted), so this
+    is exact under skew and many-to-one decoding under ambiguity."""
+    leaves, roots, weights = g.enumerate_all()
     mask = np.all(leaves[:, :k] == prefix[:k], axis=1)
     counts = np.zeros(g.v)
-    for rt in roots[mask]:
-        counts[rt] += 1.0
+    for rt, w in zip(roots[mask], weights[mask], strict=True):
+        counts[rt] += w
     return counts / counts.sum()
 
 
 def brute_force_belief_node(g: Grammar, prefix: np.ndarray, k: int, ell: int, pos: int) -> np.ndarray:
-    """Reference posterior over an internal node's symbol by full enumeration."""
+    """Reference posterior over an internal node's symbol by full (weighted) enumeration."""
     n_internal = sum(g.s**e for e in range(g.L))
     counts = np.zeros(g.v)
+    prior = 1.0 / g.v
     for root in range(g.v):
         for choices in product(range(g.m), repeat=n_internal):
             cur = np.array([root], dtype=np.int64)
             ci = 0
+            w = prior
             level_symbols = [cur.copy()]
             for el in range(g.L):
                 sel = np.array(choices[ci:ci + cur.shape[0]], dtype=np.int64)
+                w *= float(np.prod(g.probs[el][cur, sel]))
                 ci += cur.shape[0]
                 cur = g.rules[el][cur, sel].reshape(-1)
                 level_symbols.append(cur.copy())
             node_symbol = level_symbols[ell][pos]
             leaves = level_symbols[g.L]
             if np.all(leaves[:k] == prefix[:k]):
-                counts[node_symbol] += 1.0
+                counts[node_symbol] += w
     return counts / counts.sum()
 
 
