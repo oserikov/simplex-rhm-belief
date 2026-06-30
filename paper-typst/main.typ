@@ -506,6 +506,8 @@ linear image of the exact Bayesian belief simplex: it accumulates across depth, 
 context, encodes the whole latent hierarchy (local latents most strongly), and is causally
 used. 
 
+#set heading(supplement: "Appendix")
+
 = Appendix: Robustness studies <appendix-robustness>
 
 #todoai[summarize these studies and main findings in a paragraph.]
