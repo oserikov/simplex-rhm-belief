@@ -42,6 +42,8 @@
 
 #show link: it => underline(text(fill: rgb("#1a4d8f"), it))
 
+#show figure.caption: set text(size: 9.5pt)
+
 #let fig(path, caption, w: 100%) = figure(image(path, width: w), caption: caption)
 
 // Long per-run sanity tables must flow across pages; figures are unbreakable by
@@ -404,6 +406,21 @@ The most interesting wrinkle is the *inverted strength gradient*: the global roo
 
 On an exactly-solvable hierarchical grammar, a small transformer's residual stream is a linear image of the exact Bayesian belief simplex: it accumulates across depth, blooms with context, encodes the whole latent hierarchy (local latents most strongly), and is causally used. 
 
+= References
+
+#set par(justify: false)
+#bibliography("references.yml", title: none, style: "american-psychological-association")
+
+#text(size: 9.5pt)[
+  Project sources: `spec.md`, `spec-grammar-sweep.md`, `PREREGISTRATION.md`,
+  `EXECUTION_OUTPUT.md`, `results/analysis.json`, `results/root_reconstruction.json`,
+  `artifacts/train_summary.json`. Grammar sweep: `sweep.py`, `sweep.yaml`,
+  `results/sweep/g*/{config.json,analysis.json}`, `figures/sweep_sanity.csv`.
+  Architecture sweep: `spec-arch-sweep.md`, `run_arch.py`,
+  `results/arch/g*/{config.json,analysis.json}`, `figures/arch_sanity.csv`.
+]
+
+
 #set heading(supplement: "Appendix")
 #counter(heading).update(0)
 
@@ -712,16 +729,3 @@ entropy; `eff_dim`/`hull_area` the reachable-set descriptors. Loaded directly fr
     filtering. `k8_entropy` $approx 0$ exactly when $rho = 0$ regardless of skew.],
 ) <ncsanitytable>
 
-= References
-
-#set par(justify: false)
-#bibliography("references.yml", title: none, style: "american-psychological-association")
-
-#text(size: 9.5pt)[
-  Project sources: `spec.md`, `spec-grammar-sweep.md`, `PREREGISTRATION.md`,
-  `EXECUTION_OUTPUT.md`, `results/analysis.json`, `results/root_reconstruction.json`,
-  `artifacts/train_summary.json`. Grammar sweep: `sweep.py`, `sweep.yaml`,
-  `results/sweep/g*/{config.json,analysis.json}`, `figures/sweep_sanity.csv`.
-  Architecture sweep: `spec-arch-sweep.md`, `run_arch.py`,
-  `results/arch/g*/{config.json,analysis.json}`, `figures/arch_sanity.csv`.
-]
