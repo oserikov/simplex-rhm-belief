@@ -177,9 +177,14 @@ def fig_attractor():
     fig, ax = plt.subplots(2, 2, figsize=(12, 11))
     for r, (sk, am, title) in enumerate(corners):
         exact, readout, pos, verts, prior, d = _readout(_corner(sk, am))
-        # marker size grows with context: k=1 -> base, k=d -> 2*base (late points
-        # are pale yellow and otherwise hard to see)
-        size = 13 * (1 + (pos - 1) / (d - 1))
+        # marker size: exponential, end-loaded growth so the LAST token dominates --
+        # k=d is ~3x wider (~9x area) than k=1, growth accelerating toward the end.
+        size = 10.0 * 9.0 ** ((pos - 1) / (d - 1))
+        # alpha: dim the early/middle context (k<=6), bring out the last two tokens
+        # (k=7 a quarter under full, k=8 full opacity).
+        alpha = np.where(pos <= 6, 0.5, np.where(pos == 7, 0.75, 1.0))
+        norm = plt.Normalize(1, d)
+        order = np.argsort(pos)  # draw high-k last so the last token sits on top
         # shared limits WITHIN the row (exact & readout share this basis); framed on
         # the exact cloud + vertices so the corners are always in view.
         ref = np.vstack([exact, verts])
@@ -188,11 +193,13 @@ def fig_attractor():
         for c, (coords, lab) in enumerate([(exact, "exact posterior"),
                                            (readout, "probe readout")]):
             a = ax[r, c]
-            sc = a.scatter(coords[:, 0], coords[:, 1], c=pos, cmap="viridis",
-                           s=size, alpha=0.6, edgecolors="none", vmin=1, vmax=d)
+            rgba = plt.cm.viridis(norm(pos[order]))
+            rgba[:, 3] = alpha[order]  # per-point opacity
+            a.scatter(coords[order, 0], coords[order, 1], c=rgba, s=size[order],
+                      edgecolors="none")
             a.scatter(verts[:, 0], verts[:, 1], marker="o", s=150, facecolors="none",
                       edgecolors="black", linewidths=1.0, zorder=6,
-                      label="certainty vertices")
+                      label="certainty / simplex vertices")
             a.scatter([prior[0]], [prior[1]], marker="P", s=130, c="crimson",
                       edgecolors="white", linewidths=1.0, zorder=6, label="uniform prior")
             a.set_xlim(x0 - px, x1 + px); a.set_ylim(y0 - py, y1 + py)
@@ -200,7 +207,8 @@ def fig_attractor():
             a.set_title(f"{lab}\n{title}", fontsize=11)
             if r == 0 and c == 0:
                 a.legend(loc="upper left", fontsize=8, framealpha=0.9)
-            fig.colorbar(sc, ax=a, label="context position k")
+            sm = plt.cm.ScalarMappable(norm=norm, cmap="viridis"); sm.set_array([])
+            fig.colorbar(sm, ax=a, label="context position k")
     fig.tight_layout()
     p = os.path.join(OUTDIR, "noncollapse_attractor.png")
     fig.savefig(p); plt.close(fig); return p
