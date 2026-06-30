@@ -614,6 +614,188 @@ priors.
    (grey), mean in orange. *Right:* the collapse magnitude ($alpha{=}0 -> alpha{=}4$)
    across the 60 runs: $6.6 plus.minus 0.5$ nats.], w: 100%) <depth4steer>
 
+= Engineering non-collapsing belief geometry
+
+Everything so far lives on a tree whose belief, given the full leaf string, collapses
+to *certainty*: with uniform unambiguous rules the eight leaves invert level-by-level
+to exactly one root, so the $k = 8$ posterior is a delta and the belief path runs from
+the prior straight to a simplex vertex. Simplex's "interesting" HMMs behave oppositely
+— their belief mixes slowly and never reaches a vertex — but the RHM has no recurrence,
+so "slow forgetting" has no analog. The native analog of "the state can't be restored"
+is a *non-invertible observation channel*: a grammar where even the full leaf string
+leaves the root uncertain, so the reachable-belief set is a non-trivial attractor in
+the simplex rather than a path to a vertex. This pass asks what it takes to engineer
+that, and whether the linear probe still recovers it.
+
+We add two per-level knobs to the grammar (`rhm.py`, both reducing exactly to the
+canonical RHM at their off setting, verified byte-identical). *Ambiguity* $rho$ shares a
+fraction of the $v dot m$ rule entries' child-tuples *across parents* (many-to-one
+leaf#text[→]root structure); $rho in {0, 0.3, 0.6}$. *Skew* draws each parent's
+rule-choice probabilities non-uniform (Dirichlet concentration: `none`, `mid`,
+`high`). Both belief propagation and the brute-force reference were generalized to
+*weighted* sum-product using the same probabilities the sampler uses; the BP#text[↔]
+brute-force agreement holds to $2.5 times 10^(-16)$ under both knobs simultaneously. We
+sweep the full $3 times 3$ grid $times$ 3 rule-table draws — *27 runs* at the pinned
+published arch (`run_noncollapse.py`, writing `results/noncollapse/`), with the
+$("none", "none")$ cell reproducing the pass-1 baseline.
+
+The predictions below were committed (`PREREGISTRATION-noncollapse.md`, git SHA)
+*before* any result of this study was computed; we grade them in @ncscorecard.
+
+*Ambiguity engineers non-collapse; skew alone does not (the headline).* Mean exact
+$k = 8$ root-posterior entropy is *exactly $0$* at $rho = 0$ — for *every* skew level —
+and rises monotonically with $rho$: $0.00 -> 0.71 -> 1.38$ nats at `skew=none`
+(@nccurve, left). Skewing the rule-choice probabilities bends the *intermediate*
+trajectory (the back-half entropy sits higher) but the full string still inverts
+uniquely, so the endpoint stays a delta: the $rho = 0$ column is a flat zero across
+`none`/`mid`/`high`. The full entropy-vs-$k$ trajectory (@nccurve, right) makes the
+phenomenon legible — at $rho = 0$ the belief collapses cleanly to $0$ by $k = 8$ (the
+bloom-to-vertex), while at $rho = 0.3$ and $rho = 0.6$ it *plateaus* at a positive
+floor: a genuine non-collapsing attractor. Higher skew *lowers* the plateau (it
+concentrates the surviving posterior) but never removes it. This isolates ambiguity, a
+property of the decoding channel, as the only knob that manufactures irreducible
+uncertainty — exactly as pre-registered.
+
+*The linear probe survives — and, surprisingly, sharpens.* At every cell of the grid
+the residual stream still linearly encodes the (now spread) posterior well above the
+shuffled-label baseline of $approx -0.07$ (@ncheatmap). We pre-registered that the
+probe would *degrade* as $rho$ rose, the spread posterior being a harder regression
+target. The data overturn this: root probe $R^2$ *rises* with ambiguity,
+$0.36 -> 0.42 -> 0.53$ at `skew=none`, and the mid- and low-level probes rise even more
+steeply ($L_1: 0.46 -> 0.71$; $L_2: 0.35 -> 0.82$). A delta-collapsed posterior is a
+near-constant target once the context pins it, starved of variance; a non-collapsing
+posterior is a richer, higher-variance, more linearly-structured signal, so linear
+decodability *improves*. The attractor comparison (@ncattractor) shows the probe
+readout tracing the same structured interior cloud as the exact posterior at
+$rho = 0.6$, versus the vertex-bound bloom at $rho = 0$. The non-collapsing geometry is
+not just achievable — it is *more* linearly recoverable than the collapsing one.
+
+#figure(
+  table(
+    columns: (auto, 1fr, auto),
+    inset: 6pt,
+    align: (left, left, center),
+    stroke: 0.5pt + luma(200),
+    table.header([*Non-collapse prediction*], [*Outcome*], [*Verdict*]),
+    [1. $rho > 0 ==>$ $k = 8$ root entropy $> 0$, monotone in $rho$; reachable set gains
+     spread],
+    [`skew=none` $k = 8$ entropy $0.00 -> 0.71 -> 1.38$ nats; strictly increasing; belief
+     plateaus instead of collapsing.],
+    [Hit],
+    [2. `skew>0, rho=0` still collapses ($k = 8$ entropy $approx 0$)],
+    [$k = 8$ entropy is *exactly $0$* at $rho = 0$ for `none`/`mid`/`high`. Skew reshapes
+     the path, adds no endpoint uncertainty.],
+    [Hit],
+    [3. Per-level probe $R^2$ *degrades* with $rho$ (but stays above shuffled)],
+    [Stays above shuffled everywhere (✓), but $R^2$ *rises* with $rho$ ($0.36 -> 0.53$ at
+     root), not degrades — the richer target is *easier* to decode.],
+    [Partial],
+  ),
+  caption: [Scored non-collapse pre-registered predictions
+    (`PREREGISTRATION-noncollapse.md`, committed before any result of this study). Two of
+    three held; the third's "stays decodable" clause held while its "degrades" clause was
+    overturned.],
+) <ncscorecard>
+
+Two of three predictions held outright; the third split — the probe stays robust
+(as predicted) but the direction of the effect inverts (decodability *improves* with
+ambiguity), a falsifiable prior corrected by the data. As a covariate, the Bayes
+next-token floor *rises* with $rho$ at fixed skew (more genuine ambiguity) but *falls*
+sharply with skew (near-deterministic rule choice makes the next token predictable):
+e.g. `skew=none` floor $approx 0.72$–$0.78$ nats versus `skew=high` floor
+$approx 0.16$–$0.40$. The fraction of the uniform#text[→]Bayes gap the tiny model
+closes stays $approx 0.93$–$0.96$ at `skew` $<=$ `mid`, dipping to $approx 0.5$–$0.7$ at
+`skew=high` — an optimization effect (the sharp low floor is harder to reach in 4000
+steps), not a belief-geometry effect, since the probe targets the *exact* posterior.
+We note one numerical caveat: convex-hull area and effective dimensionality of the
+reachable set do *not* cleanly separate the regimes, because a collapsed posterior
+places its deltas at *distinct* simplex vertices — themselves a spread set; root
+posterior *entropy* is the clean non-collapse discriminator and is what the headline
+curve reports.
+
+#fig("figures/noncollapse_curve.png",
+  [Ambiguity, not skew, engineers non-collapse. *Left:* mean exact $k = 8$ root
+   posterior entropy vs ambiguity $rho$, one line per skew (error bars over 3 draws). At
+   $rho = 0$ entropy is exactly $0$ for *every* skew — skew alone does not prevent
+   collapse — and it rises monotonically with $rho$. *Right:* the full entropy-vs-context
+   trajectory at `skew=none`; at $rho = 0$ the belief collapses to $0$ by $k = 8$, at
+   $rho > 0$ it plateaus at a positive floor — a non-collapsing attractor.],
+  w: 100%) <nccurve>
+
+#fig("figures/noncollapse_heatmap.png",
+  [The linear probe survives ambiguity and skew, and *sharpens* with ambiguity. Per-level
+   probe $R^2$ (root $L_0$, mid $L_1$, low $L_2$) over the $3 times 3$ skew $times$
+   ambiguity grid; each cell is mean $plus.minus$ SD over 3 rule-table draws, against a
+   shuffled baseline of $approx -0.07$. $R^2$ rises left-to-right (with $rho$) at every
+   level. The single dark $L_2$ cell at $("mid", rho{=}0)$ is a near-deterministic-target
+   instability, not a decodability failure.],
+  w: 100%) <ncheatmap>
+
+#fig("figures/noncollapse_attractor.png",
+  [Exact posterior (left column) and linear-probe readout (right column) in belief-PCA,
+   colored by context position, for the uniform corner $rho = 0$ (top) and the
+   high-ambiguity corner $rho = 0.6$ (bottom). At $rho = 0$ the late-context beliefs
+   reach the simplex vertices (bloom-to-certainty); at $rho = 0.6$ they form a structured
+   interior cloud — the non-collapsing attractor — which the probe readout traces.],
+  w: 86%) <ncattractor>
+
+= From fixed trees to recursive parse beliefs
+
+The next step is not to make this RHM larger for its own sake, but to relax the assumption
+that makes it exactly solvable: the fixed tree. The present grammar is a finite,
+depth-limited PCFG whose hidden trees can be enumerated exactly. For $v = 8$, $s = 2$,
+$L = 3$, and $m = 2$, the tree has $1 + 2 + 4 = 7$ internal rule choices. Conditional on
+a root, this gives $2^7 = 128$ hidden trees; across the eight roots it gives
+$8 dot 128 = 1024$ total trees, and under the unambiguous-rule constraint these map
+one-to-one to leaf strings. The linguistic analogy is limited: a depth-3 binary RHM
+resembles a stylized binary phrase-structure grammar in branching structure, while
+attested grammars vary in depth, arity, vocabulary distribution, and rule multiplicity.
+
+The fixed topology is the benchmark's strength. It lets us run exact sum-product BP,
+enumerate all trees, count level-wise statistics cleanly, and avoid PCFG properness and
+normalization problems. It also removes parsing. Once the tree can vary in shape or depth,
+the learner must infer structure as well as symbols: inside-outside, Earley/Stolcke, or
+other chart parsers replace the fixed-tree BP pass. With unbounded recursion, the
+predictive state may require an unbounded stack and a countably infinite family of chart
+configurations. This is the real boundary between the current experiment and syntax-like
+recursion.
+
+Cross that boundary gradually. Cap a recursive PCFG at a fixed depth so inference stays
+bounded. Keep the vocabulary small ($q = v = 8$), keep binary rules, reuse the same
+categories across depths, and impose a hard maximum derivation depth $D_"max"$. Train the
+same scale of decoder transformer, alongside an LSTM and a stack-augmented baseline, on
+shallow depths and test on deeper held-out depths. First run a Dyck-style bracket
+experiment to test stack tracking without lexical ambiguity. Compare the structures
+directly: right-branching or tail-recursive grammars should stress memory differently from
+center-embedded grammars, even when length, category inventory, and depth cap are matched.
+
+This extension lets us compare HMM beliefs with grammar beliefs. In an HMM, the exact
+belief state is a point in a simplex over hidden states. In the fixed-tree RHM, the
+analogous object is the prefix-conditioned collection of BP node marginals and messages.
+The full joint belief over hidden trees is exponential, but the marginal targets have far
+fewer dimensions. In the $L = 3$ grammar, all node marginals occupy at most
+$7 dot (8 - 1) = 49$ coordinates; the ancestor path relevant to a particular next leaf
+occupies about $3 dot (8 - 1) = 21$. In a recursive PCFG, the natural targets become chart
+beliefs instead: span/category marginals and rule/split marginals computed by
+inside-outside inference.
+
+The falsifiable question is not which metaphor fits, but what belief object the model
+linearizes. Does the residual stream encode the exponential joint parse posterior, or a
+factored direct sum of local chart beliefs? If it is factored, do span, category, and
+split beliefs occupy separable or approximately orthogonal subspaces? The fixed-tree
+results suggest a concrete prior: local, prediction-adjacent beliefs may be easier to read
+than the global root. Recursive grammars test whether that inverted strength gradient
+survives when the model must maintain alternative parses instead of filling a known tree
+template.
+
+This program is not a search for fractal geometry in the present RHM. Fixed-depth RHM
+beliefs form a finite set, and bounded recursion remains finite once $D_"max"$ is fixed.
+What the cap can reveal is the deformation of the representation as the allowed stack
+grows: whether linear decodability degrades smoothly, whether chart-like subspaces appear,
+and whether center embedding produces a different geometry from tail recursion. Claims
+about self-similar belief sets require a different regime — non-unifilar processes,
+infinite memory, or genuinely unbounded recursion.
+
 = Discussion and limitations
 
 The picture is coherent: a tiny transformer trained to near-Bayes-optimal loss on a
@@ -777,6 +959,31 @@ leaf-parent-$L_3$ probe $R^2$. Loaded directly from `figures/depth4_sanity.csv`.
     $n_"layer" in {2, 3}$). No convergence filtering. `deepest_r2` is the mean over the
     eight leaf-parent ($L_3$) nodes.],
 ) <depth4sanitytable>
+
+= Appendix: Per-run non-collapse sweep sanity table <appendix-noncollapse-sanity>
+
+Every run in the non-collapse sweep, no filtering — all 27 (3 `skew` $times$ 3
+`ambiguity` $times$ 3 rule-table draws), at the pinned arch ($n_"layer" = 2, n_"embd" =
+128, n_"head" = 4$, 4000 steps). `bayes_floor` is the exact weighted Bayes-optimal
+next-token entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap
+closed (covariate); `root_r2`/`mid_r2`/`low_r2` the level-$L_0$/$L_1$/$L_2$ probe $R^2$
+(shuffled baseline `shuffled_r2`); `k8_entropy` the headline mean $k = 8$ root posterior
+entropy; `eff_dim`/`hull_area` the reachable-set descriptors. Loaded directly from
+`figures/noncollapse_sanity.csv`.
+
+#let ncsanity = csv("figures/noncollapse_sanity.csv")
+#figure(
+  table(
+    columns: 13,
+    inset: 2.4pt,
+    align: center,
+    stroke: 0.5pt + luma(220),
+    table.header(..ncsanity.at(0).map(h => [#text(6pt, weight: "bold")[#h]])),
+    ..ncsanity.slice(1).flatten().map(c => [#text(6pt)[#c]]),
+  ),
+  caption: [All 27 non-collapse runs (3 skew $times$ 3 ambiguity $times$ 3 draws). No
+    filtering. `k8_entropy` $approx 0$ exactly when $rho = 0$ regardless of skew.],
+) <ncsanitytable>
 
 = References
 

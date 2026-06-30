@@ -1,0 +1,61 @@
+{
+  "config": {
+    "grammar": 1,
+    "seed": 0,
+    "ambiguity": 0.6,
+    "skew": "high",
+    "n_layer": 2,
+    "n_embd": 128,
+    "n_head": 4,
+    "lr": 0.003,
+    "steps": 4000,
+    "batch_size": 128,
+    "test_frac": 0.2,
+    "n_probe": 400,
+    "log_every": 1000,
+    "rhm_L": 3
+  },
+  "rhm_fixed": {
+    "s": 2,
+    "L": 3,
+    "v": 8,
+    "m": 2
+  },
+  "metrics": {
+    "root_r2": 0.5496427907621665,
+    "deepest_r2": 0.8281102323220662,
+    "loss_gap_closed": 0.9719547510194093,
+    "test_ce": 0.26248034834861755,
+    "layer0_r2": 0.0841510146856308,
+    "layer_final_r2": 0.5496420860290527,
+    "elapsed_sec": 29.27095913887024,
+    "root_entropy_full_context": 0.6122710108757019,
+    "reachable_eff_dim": 3.650903997889684,
+    "reachable_hull_area": 0.7863238966695012,
+    "r2_root_L0": 0.5496427907621665,
+    "r2_mid_L1a": 0.6449950852819651,
+    "r2_mid_L1b": 0.6098034871361175,
+    "r2_low_L2a": 0.7662212817577172,
+    "r2_low_L2b": 0.7957179402440493,
+    "r2_low_L2c": 0.8022268873988943,
+    "r2_low_L2d": 0.9482748198876035
+  },
+  "wandb_run_id": null,
+  "wandb_run_path": null,
+  "git_sha": "1942187fde76e7648c045dc0c0dc29a5c95ca282",
+  "timestamp": "2026-06-30T15:40:42",
+  "train_summary": {
+    "uniform_baseline": 2.0794415416798357,
+    "bayes_optimal_mean": 0.21005287308554985,
+    "final_test_loss": 0.26248034657324654,
+    "loss_gap_closed": 0.9719547495026166,
+    "n_params": 398848,
+    "n_train": 820,
+    "n_test": 204,
+    "config": {
+      "n_layer": 2,
+      "n_embd": 128,
+      "n_head": 4
+    }
+  }
+}
