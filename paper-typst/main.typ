@@ -436,9 +436,10 @@ posterior, versus the vertex-bound bloom at $rho = 0$.
 #fig("figures/noncollapse_attractor.png",
   [Exact posterior (left column) and linear-probe readout (right column) in belief-PCA,
    colored by context position $k$ (marker size grows with $k$), for the uniform corner
-   $rho = 0$ (top) and the high-ambiguity corner $rho = 0.6$ (bottom). Black #sym.times are
-   the eight certainty vertices (one-hot roots) and the red #sym.plus is the uniform prior,
-   both projected into the panel's own basis. Because root-class labels are not aligned
+   $rho = 0$ (top) and the high-ambiguity corner $rho = 0.6$ (bottom). Open black circles
+   mark the eight certainty vertices (one-hot roots) and the red #sym.plus the uniform prior,
+   both projected into the panel's own basis (the circles are hollow so the points landing
+   inside them stay visible). Because root-class labels are not aligned
    across grammars, each row keeps its *native* belief-PCA basis and axis limits are shared
    only *within* a row; the vertex markers give the label-agnostic reference. At $rho = 0$
    the late-context beliefs land *on* the vertices (collapse to certainty); at $rho = 0.6$

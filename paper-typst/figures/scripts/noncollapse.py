@@ -190,8 +190,8 @@ def fig_attractor():
             a = ax[r, c]
             sc = a.scatter(coords[:, 0], coords[:, 1], c=pos, cmap="viridis",
                            s=size, alpha=0.6, edgecolors="none", vmin=1, vmax=d)
-            a.scatter(verts[:, 0], verts[:, 1], marker="X", s=150, c="black",
-                      edgecolors="white", linewidths=1.3, zorder=6,
+            a.scatter(verts[:, 0], verts[:, 1], marker="o", s=150, facecolors="none",
+                      edgecolors="black", linewidths=1.0, zorder=6,
                       label="certainty vertices")
             a.scatter([prior[0]], [prior[1]], marker="P", s=130, c="crimson",
                       edgecolors="white", linewidths=1.0, zorder=6, label="uniform prior")
