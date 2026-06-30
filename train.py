@@ -165,6 +165,7 @@ def train(args, out_dir: Path = ART) -> dict:
     # sample trees by their generation probability (uniform when skew=none)
     train_rng = np.random.default_rng(args.seed + 1)
     uniform_w = bool(np.allclose(train_p, train_p[0]))
+    loss_history = []  # (step, train_loss, test_loss) at every log_every for the loss curve
     for step in range(args.steps):
         if uniform_w:
             idx = train_rng.integers(0, n_train, size=args.batch_size)
@@ -179,6 +180,7 @@ def train(args, out_dir: Path = ART) -> dict:
         if step % args.log_every == 0 or step == args.steps - 1:
             tl = eval_test_loss(model, test_t, weights=test_w)
             model.train()
+            loss_history.append([int(step), float(loss.item()), float(tl)])
             print(f"step {step:4d} train_loss={loss.item():.4f} test_loss={tl:.4f}")
 
     final_test = eval_test_loss(model, test_t, weights=test_w)
@@ -240,6 +242,7 @@ def train(args, out_dir: Path = ART) -> dict:
         "n_train": int(len(train_x)),
         "n_test": int(len(test_x)),
         "config": {"n_layer": args.n_layer, "n_embd": args.n_embd, "n_head": args.n_head},
+        "loss_history": loss_history,  # [[step, train_loss, test_loss], ...]
     }
     (out_dir / "train_summary.json").write_text(json.dumps(summary, indent=2))
     print(f"saved {out_dir}/ :", [p.name for p in out_dir.iterdir()])

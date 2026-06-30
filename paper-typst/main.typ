@@ -64,7 +64,7 @@
   (1024 equiprobable trees) to enumerate exactly. We compute the *exact* Bayesian
   posterior over the tree's hidden latents by sum-product belief propagation, verified
   against brute-force enumeration to $<10^(-6)$. The trained model reaches a test
-  cross-entropy of 0.89 nats, closing #text[≈]88% of the gap between the uniform
+  cross-entropy of 0.88 nats, closing #text[≈]89% of the gap between the uniform
   baseline (2.08) and the Bayes-optimal floor (0.73) — it has effectively learned the
   posterior predictor. A single global linear probe partially recovers this posterior
   from the residual stream: held-out $R^2 = 0.38$ for the root class versus #text[≈]0 for
@@ -168,14 +168,18 @@ by next-token prediction on 922 training strings (102 held out) for 4000 steps o
 achievable loss. Averaging the exact per-position posterior entropy over the seven
 predicted positions gives the Bayes-optimal mean next-token cross-entropy: 0.725 nats. The
 uniform baseline is $ln 8 = 2.079$. The trained model reaches a final held-out
-cross-entropy of *0.891 nats* (@loss), closing $(2.079 - 0.891) / (2.079 - 0.725) ≈ 88%$
+cross-entropy of *0.880 nats* (@loss), closing $(2.079 - 0.880) / (2.079 - 0.725) ≈ 89%$
 of the gap. The model has, to a good approximation, learned the true posterior predictor —
 which is the precondition for asking whether it represents the posterior internally.
 
 #fig("figures/loss_curve.png",
-  [The transformer learned the true RHM predictor. Test cross-entropy (0.891 nats)
-   sits far below the uniform baseline ($ln 8 = 2.079$) and close to the Bayes-optimal
-   floor (0.725), closing #text[≈]88% of the uniform#text[→]Bayes gap.], w: 62%) <loss>
+  [The transformer converges to the true RHM predictor. Held-out next-token cross-entropy
+   (heavy line) falls from the uniform baseline ($ln 8 = 2.079$, top dashed) toward the
+   Bayes-optimal floor ($0.725$, bottom dashed) over 4000 training steps, ending at
+   $0.880$ nats — closing #text[≈]89% of the uniform#text[→]Bayes gap (shaded). The
+   faint line is the train-minibatch CE. Seeded reproduction of the pinned-arch canonical
+   run (grammar seed 0, $n_"layer"{=}2, n_"embd"{=}128, n_"head"{=}4$),
+   `results/refrun/`.], w: 66%) <loss>
 
 = Pre-registered prediction
 
@@ -200,7 +204,7 @@ We fit one global least-squares affine map from the 128-d residual stream to the
 exact root posterior, on a probe set of $N = 400$ held-out examples, and score it by
 $R^2$ on held-out data. The final-layer probe reaches $R^2 = 0.38$, while the same probe
 fit to *shuffled* labels scores $≈ 0$ ($-0.085$). So the posterior is genuinely present
-and linearly accessible above chance — but $R^2 = 0.38$ means the probe explains only
+and linearly accessible above chance — but the probe explains only
 about a third of the variance: this is a *partial*, noisy recovery, not an exact
 reconstruction. Projected into a belief-space PCA basis (@simplex), the probe's predicted
 posteriors occupy the same structured region as the exact posteriors and reproduce the

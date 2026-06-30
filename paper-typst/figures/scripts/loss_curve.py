@@ -1,10 +1,13 @@
 # Figure: loss_curve.png
-# Message: The transformer learned the true predictor: its test cross-entropy
-#   sits far below the uniform baseline and close to the Bayes-optimal floor.
-# Data: artifacts/probe_data.npz: final_test_loss (model), uniform_baseline
-#   (ln 8 = 2.079), floor (per-position Bayes-optimal entropy; mean over the 7
-#   predicted positions = Bayes floor).
-# Type: bar chart of three cross-entropies (nats/token) with reference lines.
+# Message: The transformer converges to the true RHM predictor -- held-out
+#   next-token cross-entropy drops from the uniform baseline toward the
+#   Bayes-optimal floor over training, closing ~89% of the gap.
+# Data: results/refrun/train_summary.json -- a seeded reproduction of the pass-1
+#   canonical run (grammar seed 0, pinned arch n_layer=2/n_embd=128/n_head=4,
+#   4000 steps, test_frac 0.1) with the per-step loss history saved
+#   (`loss_history`: [step, train_minibatch_CE, held-out_test_CE]).
+# Type: training curve (test CE vs step) with uniform + Bayes-floor reference lines.
+import json
 import os
 import sys
 
@@ -12,38 +15,50 @@ sys.path.insert(0, os.path.dirname(__file__))
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from _style import OUTDIR, PROBE, apply_style
+from _style import OUTDIR, ROOT, apply_style
 
 apply_style()
-d = np.load(PROBE)
-model = float(d["final_test_loss"])
-uniform = float(d["uniform_baseline"])
-floor = float(np.mean(d["floor"]))     # Bayes-optimal over the 7 predicted positions
-print("model", model, "uniform", uniform, "bayes_floor", floor)
-assert np.isfinite([model, uniform, floor]).all(), "non-finite loss values"
 
-names = ["Uniform\nbaseline", "Trained\ntransformer", "Bayes-optimal\nfloor"]
-vals = [uniform, model, floor]
+with open(os.path.join(ROOT, "results/refrun/train_summary.json")) as f:
+    S = json.load(f)
+hist = np.array(S["loss_history"], dtype=float)  # (n, 3): step, train, test
+steps, train_ce, test_ce = hist[:, 0], hist[:, 1], hist[:, 2]
+uniform = float(S["uniform_baseline"])
+floor = float(S["bayes_optimal_mean"])
+final = float(S["final_test_loss"])
+gap_closed = (uniform - final) / (uniform - floor)
+print(f"final test CE {final:.4f}  uniform {uniform:.4f}  floor {floor:.4f}  "
+      f"gap closed {gap_closed:.3f}")
+assert np.isfinite(hist).all() and len(hist) > 10, "loss history missing/short"
+
 pal = sns.color_palette("colorblind")
-colors = [pal[7], pal[0], pal[2]]
+fig, ax = plt.subplots(figsize=(7.6, 5.0))
 
-fig, ax = plt.subplots(figsize=(7.5, 5.2))
-bars = ax.bar(range(3), vals, color=colors, edgecolor="0.2", width=0.6)
-ax.set_xticks(range(3))
-ax.set_xticklabels(names)
-ax.set_ylabel("Cross-entropy (nats / token)")
-ax.set_ylim(0, uniform * 1.12)
-ax.set_title("The model learned the true RHM predictor")
-for i, v in enumerate(vals):
-    ax.annotate(f"{v:.3f}", (i, v), textcoords="offset points",
-                xytext=(0, 6), ha="center", fontsize=11)
-gap = (model - floor) / (uniform - floor) * 100
-ax.annotate(f"closes {100 - gap:.0f}% of the\nuniform→Bayes gap",
-            xy=(1, model), xytext=(1.35, uniform * 0.7), fontsize=10,
-            ha="left", arrowprops=dict(arrowstyle="->", color="0.3"))
+# the gap the model must close, shaded between the two reference lines
+ax.axhspan(floor, uniform, color=pal[7], alpha=0.08, zorder=0)
+ax.axhline(uniform, ls="--", lw=1.3, color=pal[7],
+           label=f"uniform baseline ({uniform:.3f})")
+ax.axhline(floor, ls="--", lw=1.3, color=pal[2],
+           label=f"Bayes-optimal floor ({floor:.3f})")
+
+ax.plot(steps, train_ce, lw=1.0, color=pal[0], alpha=0.35, label="train minibatch CE")
+ax.plot(steps, test_ce, lw=2.2, color=pal[0], label="held-out test CE")
+ax.scatter([steps[-1]], [final], s=42, color=pal[0], zorder=5)
+
+ax.set_xlabel("training step")
+ax.set_ylabel("cross-entropy (nats / token)")
+ax.set_ylim(floor - 0.12, uniform + 0.08)
+ax.set_title("The model converges to the true RHM predictor")
+ax.annotate(f"final test CE {final:.3f}\ncloses {gap_closed * 100:.0f}% of the gap",
+            xy=(steps[-1], final), xytext=(steps[-1] * 0.5, final + 0.42),
+            fontsize=10, ha="left",
+            arrowprops=dict(arrowstyle="->", color="0.3"))
+ax.legend(loc="upper right", framealpha=0.95)
 
 plt.tight_layout()
 out = os.path.join(OUTDIR, "loss_curve.png")
 plt.savefig(out)
 plt.close()
-print("wrote", out, os.path.getsize(out), "bytes")
+sz = os.path.getsize(out)
+print("wrote", out, sz, "bytes")
+assert sz > 10_000, f"{out} too small ({sz} bytes)"

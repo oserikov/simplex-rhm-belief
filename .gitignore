@@ -43,3 +43,8 @@ results/depth4/*/probe_data.npz
 results/depth4/*/figures/
 results/depth4/run_depth4.log
 results/depth4_run.out
+
+# loss-curve reference run: keep train_summary.json (holds loss_history); drop heavy binaries
+results/refrun/model.pt
+results/refrun/probe_data.npz
+results/refrun/figures/
