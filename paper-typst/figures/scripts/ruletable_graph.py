@@ -139,7 +139,7 @@ if __name__ == "__main__":
     from analyze import load_grammar
 
     g_base = load_grammar(os.path.join(ROOT, "artifacts"))
-    draw_grammar(g_base, os.path.join(OUTDIR, "ruletable_graph.png"))
+    draw_grammar(g_base, os.path.join(OUTDIR, "ruletable_graph.png"), show_weights=True)
 
     g_skew = load_grammar(
         os.path.join(ROOT, "results/noncollapse/skhigh_am0_g00_L2_d128_h4_t4000_s0"))
@@ -150,5 +150,5 @@ if __name__ == "__main__":
     g_amb = load_grammar(
         os.path.join(ROOT, "results/noncollapse/sknone_am0.6_g00_L2_d128_h4_t4000_s0"))
     draw_grammar(g_amb, os.path.join(OUTDIR, "ruletable_graph_amb.png"),
-                 show_weights=False,
+                 show_weights=True,
                  title="Ambiguous grammar (rho=0.6 shared child-tuples) as a graph")

@@ -42,7 +42,7 @@ prior = pca.transform(np.full((1, V), 1.0 / V))[0]
 pos = np.tile(np.arange(P), N)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5.2), sharex=True, sharey=True)
 for ax, Z, ttl in [(ax1, Zt, "Ground-truth posterior"),
-                   (ax2, Zp, "Linear probe of residual stream")]:
+                   (ax2, Zp, "Linear probe of ROOT posterior")]:
     sc = ax.scatter(Z[:, 0], Z[:, 1], c=pos, cmap="viridis", s=18, alpha=0.75,
                     edgecolors="none")
     ax.scatter(verts[:, 0], verts[:, 1], marker="o", s=150, facecolors="none",

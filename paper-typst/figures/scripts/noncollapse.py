@@ -90,7 +90,7 @@ def fig_curve():
                        color=CB[i], label=f"skew={sk}")
     ax[0].axhline(0, color="gray", lw=0.8, ls=":")
     ax[0].set_xlabel(r"ambiguity $\rho$"); ax[0].set_ylabel("mean $k{=}8$ root entropy (nats)")
-    ax[0].set_title("Ambiguity engineers non-collapse\n($\\rho{=}0$ collapses for every skew)")
+    ax[0].set_title("Ambiguity engineers non-triviality\n($\\rho{=}0$ collapses for every skew)")
     ax[0].legend(title="rule-choice")
     # right: full entropy-vs-k trajectory at skew=none, one line per rho
     for j, am in enumerate(AMB_ORDER):
@@ -102,7 +102,7 @@ def fig_curve():
                            color=CB[j], alpha=0.2)
     ax[1].axhline(0, color="gray", lw=0.8, ls=":")
     ax[1].set_xlabel("context position $k$"); ax[1].set_ylabel("mean root entropy (nats)")
-    ax[1].set_title("Belief trajectory (skew=none)\ncollapses to 0 at $\\rho{=}0$, plateaus at $\\rho{>}0$")
+    ax[1].set_title("Belief trajectory (skew=none)\ncollapses to 0 at $\\rho{=}0$")
     ax[1].legend(title="ambiguity")
     fig.tight_layout()
     p = os.path.join(OUTDIR, "noncollapse_curve.png")

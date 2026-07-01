@@ -101,7 +101,11 @@ In some sense, RHMs are a more natural testbed than HMMs for these questions, be
 
 This paper trains a tiny transformer on such grammars and studies whether the residual stream carries the ground truth posterior, where in the network it lives, what geometry it traces, and whether the model relies on it. 
 
-#todoai[write brief findings here. (copy from discussion) mention the pre-registration, robustness studies and ambiguity studies findings, not only first exp studies]
+We find that the residual stream carries a *partial* linear image of the ground truth posterior: a single global probe recovers the root class at $R^2 = 0.38$ (against #text[≈]0 for a shuffled control) and the deeper, locally-predictive latents more strongly (up to $0.66$).
+This image accumulates across layers ($-0.00 -> 0.15 -> 0.38$) and *blooms* outward from the prior toward simplex vertices as context grows, and causal steering confirms the model relies on it rather than merely exposing it.
+We pre-registered these predictions before training; three of four held, the informative miss being the root's sub-$0.5$ recovery.
+The phenomenology replicates across the RHM family (10-grammar $times$ 3-seed sweep) and is robust to model capacity (99-run architecture sweep) and one tree level deeper ($L = 4$).
+Finally, breaking the grammar's invertibility with *ambiguity* leaves a genuinely uncertain belief state, and there the probe does not degrade but *sharpens* — evidence the residual tracks the belief itself, not a memorized leaf#text[→]root lookup.
 
 = Experimental design
 
@@ -109,9 +113,13 @@ This paper trains a tiny transformer on such grammars and studies whether the re
 Methodologically, this paper sits between the two reference points in the bibliography: #cite(<cagnetta2025>, form: "prose")'s RHM study uses the same hierarchical data model but evaluates the last-token prediction setting, while #cite(<shai2026>, form: "prose")'s *Transformers learn factored representations* motivates pooling predictive vectors across contexts.
 
 
-#todoai[write a paragraph that summarizes all experiments made: initial (w. robustness study) and supplementary.]
+The study proceeds in five passes.
+The *initial* experiment fixes one grammar and one training run and establishes the four core findings — linear decodability, layer accumulation, blooming, and causal use.
+Three *robustness* passes then test whether these are properties of the RHM family rather than of one draw: a grammar sweep (10 grammars $times$ 3 seeds, 30 runs), an architecture sweep (11 capacity configs $times$ 3 grammars $times$ 3 seeds, 99 runs), and a depth-$4$ extension (10 grammars $times$ 2 model depths $times$ 3 seeds, 60 runs).
+A final *supplementary* pass generalizes the grammar with two knobs — ambiguity and skew (27 runs) — to engineer a belief state that stays uncertain even at full context, and asks whether the linear image survives.
+Every posterior used as a probe target is the exact ground truth, computed by the belief propagation derived in @beliefs and verified against brute-force enumeration.
 
-== The Random Hierarchy Model and exact beliefs
+== The Random Hierarchy Model and exact beliefs <beliefs>
 #todooleg[explain why this experiment was actually done, why they fixed grammar first, and what hypothesis does this answer?]
 
 *Grammar.*
@@ -205,7 +213,7 @@ The model has approached the ground truth posterior predictor. Does it represent
   [The transformer converges close to the ground truth RHM predictor.
    Held-out next-token cross-entropy (heavy line) falls from the uniform baseline ($ln 8 = 2.079$, top dashed) toward the Bayes-optimal floor ($0.725$, bottom dashed) over 4000 training steps, ending at $0.880$ nats, closing #text[≈]89% of the uniform#text[→]Bayes gap (shaded).
    The faint line is the train-minibatch CE.
-   #footnote[Seeded reproduction of the pinned-arch canonical run (grammar seed 0, $n_"layer"{=}2, n_"embd"{=}128, n_"head"{=}4$), `results/refrun/`.#todoai[are these details already mentioned in the appendix on Reproducibility? If so, drop them here]]], w: 66%) <loss>
+   #footnote[Seeded reproduction of the canonical run, `results/refrun/`; exact parameters in @appendix-reproduce (Stage 2).]], w: 66%) <loss>
 
 == Pre-registered prediction
 
@@ -218,23 +226,30 @@ We report against these predictions in @scorecard.
 
 == A single linear probe partially decodes the root posterior
 
-We fit one global least-squares affine map from the 128-d residual stream to the 8-class ground truth root posterior space, on a probe set of $N = 400$ held-out examples (first, agnostic of context position, then with respect to it #todoai[how do we did both measurements? should be reflected in docs. also: did we have enough examples for each context position measurement to make sense?]), and score it by $R^2$ on held-out data.
-The final-layer probe reaches $R^2 = 0.38$, while at the control task (the same probe fit to *shuffled* labels, #todoai[cite https://arxiv.org/abs/1909.03368]) scores $≈ 0$ ($-0.085$).
-So the ground truth posterior is linearly accessible above chance, but the probe explains only a third of the variance: the recovery is *partial*.#todoai[what means "explains a third of variance?"]
-Projected into a belief-space PCA basis (@simplex), the probe's predicted posteriors occupy the same structured region as the ground truth posteriors and reproduce the same position gradient #todoai[have we measured this? or this is just "I lokoed at it" thing? I remember we've measured the MCA or something], but as a diffuse cloud rather than the discrete point set of the ground truth. #footnote[The ground-truth panel looks sharper partly because the ground truth posterior takes few distinct values, and identical points overplot, whereas every probe prediction differs slightly.]
-The affine correspondence is particularly weak for the root; it strengthens markedly for deeper latents (next subsection) and at later layers #todoai[in what result is this sentence grounded? the picture mentioned here is about the root, but now we say for other latents it's better, do we have data to make such picture?].
+We fit one global least-squares affine map from the 128-d residual stream to the 8-class ground truth root posterior space, on a probe set of $N = 400$ held-out examples, and score it by $R^2$ on held-out data.
+A single probe is fit once on all context positions pooled; we then score that same fixed probe both pooled and, separately, at each context position.
+Because the train/test split is over whole sequences, every held-out sequence contributes one example at each of the eight positions, so each per-position score still rests on all $N = 400$ examples.
+The final-layer probe reaches $R^2 = 0.38$, while at the control task (the same probe fit to *shuffled* labels, following #cite(<hewitt2019>, form: "prose")) scores $≈ 0$ ($-0.085$).
+So the ground truth posterior is linearly accessible above chance, but the probe explains only a third of the variance: the recovery is *partial*.
+($R^2 = 0.38$ means the affine map accounts for $38%$ of the variance in the ground truth posterior vectors, where $1$ would be exact reconstruction and $0$ no better than always predicting the mean posterior.)
+Projected into a belief-space PCA basis (@simplex), the probe's predicted posteriors *visibly* occupy the same structured region as the ground truth posteriors and trace the same position gradient — a qualitative correspondence read off the projection, not a computed alignment score — but as a diffuse cloud rather than the discrete point set of the ground truth. #footnote[The ground-truth panel looks sharper partly because the ground truth posterior takes few distinct values, and identical points overplot, whereas every probe prediction differs slightly.]
+The affine correspondence is particularly weak for the root; it strengthens markedly for the deeper latents — mid-level $R^2$ of $0.51$ and $0.59$, deepest up to $0.66$ (@latents, next subsection).
 
 #fig("figures/posterior_simplex.png",
   [The residual stream is a *partial* affine image of the exact belief simplex.
    *Left:* PCA(2) of the ground truth root posteriors (few distinct values, hence sharp overplotted dots); small-$k$ points sit near the prior, large-$k$ points spread toward vertices.
-   *Right:* the linear probe's predictions in the same basis, colored by context position — the same region and position gradient, but a diffuse cloud: held-out root $R^2 ≈ 0.38$, an imperfect recovery, not an exact one. #todoai[I think we want to make it very explicit about this feature being about root posterior. This figure needs respective title]],
+   *Right:* the linear probe's predictions *for the root posterior* in the same basis, colored by context position — the same region and a similar position gradient, but a diffuse cloud: held-out root $R^2 ≈ 0.38$, an imperfect recovery, not an exact one.
+   Both panels are the *root* class specifically.],
   w: 92%) <simplex>
 
 == Root posterior decodability accumulates across model depth and context ix
 
 The residual stream serves as a running sum of layer contributions, so we ask where the belief is built.
 Both panels here decode the *root* posterior.
-The residual stream is read at three points — the model has two attention blocks, so `output_hidden_states` returns $n_"layer" + 1 = 3$ snapshots: index 0 is the token#text[+]position embedding, index 1 is after block 1, index 2 is after block 2 (the "Layer 0/1/2" axis is these three readout #todoai[introduce the term belief readout in three to five words, in brackets] points, not three transformer layers)#todoai[I don't understand what three residual blocks are. I know we have: Embedding layer, First layer of LLM, Second layer. I think the notion of attention blocks introduced here is either confusing to me or I misunderstood what we were probing initially, because I thought we have four attention heads at each layer in this particular experiment].
+The residual stream is read at three points.
+A GPT-2 "block" is one transformer layer — self-attention (here 4 heads) followed by an MLP, both writing into the residual stream — and our model stacks two such blocks.
+Requesting `output_hidden_states` returns $n_"layer" + 1 = 3$ residual snapshots: index 0 is the token#text[+]position embedding (the input to block 1), index 1 is the residual after block 1, index 2 after block 2.
+The four heads live *inside* each block and are not separate readout points; the "Layer 0/1/2" axis is these three *belief-readout points* (the sites where we decode the posterior), not three transformer layers.
 Root-posterior probe $R^2$ rises along them: $-0.00$ at the embedding, $0.15$ after block 1, $0.38$ after block 2, while the shuffled control stays at $≈ 0$ throughout (@layerpos, left) — each block adds belief-relevant signal.
 Resolving the same root probe by context position (@layerpos, right), the root is already decodable at early positions even at the shallow readout points, and at the final readout it is near-perfectly decodable ($R^2 = 1.0$) for the first few positions $0$–$3$#todooleg[I have a feeling this is beautiful and should have been predicted, but I didn't predict it initially. It would be nice to derive this. Also, would adding another layer help? We should clearly link these results.]. #footnote[A few mid-readout cells are strongly negative (the probe underperforms the mean predictor on those positions); the heatmap colors are clipped for legibility, but the cell labels show the raw values].
 
@@ -273,8 +288,8 @@ Scaling the identical per-level probe to $L = 4$ (the depth study in @depth4leve
 
 Our central geometric result (@blooming): projecting the linear belief readout into a belief-space PCA(2) basis, the points form a tight central cluster near the uniform prior when little context is observed and expand outward toward the simplex vertices as context accumulates.
 The mean radius about the prior anchor grows from 0.17 at $k = 0$ to #text[≈]0.39 at $k = 7$, tracking the true posterior's own growth (0.17 #text[→] 0.47); equivalently, the ground truth posterior entropy falls with position (1.84 nats at $k=0$ to 0.00 at $k=7$).
-The right panel colors the same cloud by ground-truth root class: it is only *loosely* organized by class — consistent with the modest root decodability ($R^2 = 0.38$, MAP #todoai[What MAP root accuracy means? What is compared, and what is this metric. Write answer as a todooleg instead of todoai here with explanation] root accuracy $0.47$, @rootmatch) — not a clean separation.
-Raw residual PCA, dominated by token and position nuisance variance, #todoai[was it supposed to bloom with respect to what?] does *not* bloom (radius#text[–]vs#text[–]$k$ correlation $approx 0.03$, against $approx 0.81$ for the readout) — it is the *belief content* of the residual that does.
+The right panel colors the same cloud by ground-truth root class: it is only *loosely* organized by class — consistent with the modest root decodability ($R^2 = 0.38$, MAP #todooleg[MAP root accuracy = the fraction of held-out examples where the probe's argmax root class matches the ground-truth posterior's argmax (MAP) root class; here $0.47$. It compares only the top-1 class, unlike $R^2$, which scores the whole 8-dim posterior vector.] root accuracy $0.47$, @rootmatch) — not a clean separation.
+Raw residual PCA, dominated by token and position nuisance variance, does *not* bloom — that is, its distance from the center does not grow with context position $k$ (radius#text[–]vs#text[–]$k$ correlation $approx 0.03$, against $approx 0.81$ for the belief readout) — it is the *belief content* of the residual that does.
 
 #fig("figures/blooming.png",
   [The belief read out of the final-layer residual blooms with context.
@@ -328,7 +343,8 @@ Three of four predictions held cleanly.
 The single miss is the root $R^2$, which came in at 0.38 rather than the anticipated $> 0.5$.
 We take this as a genuine and informative negative: the anticipation was correct in *form* (linear, above baseline, growing with depth and context) but our magnitude estimate for the *root specifically* was optimistic.
 The latent-level sweep — which we did not pre-specify — explains why: the root is the coarsest, least locally-predictive latent, and the threshold we anticipated is in fact met by every deeper latent in the hierarchy.
-None of the pre-registered failure modes (degenerate collapse, non-linear-only encoding, MAP-only encoding, flat-with-depth #todoai[have we actually tested for: non-linear only encoding, MAP only encoding, flat with depth?]) materialized; in particular MAP root-class accuracy is only 0.47 while full-simplex $R^2$ is positive and graded, ruling out a MAP-only representation.
+Three of the four pre-registered failure modes are contradicted by direct measurement: *degenerate collapse* (the readout blooms, and under ambiguity the belief stays non-trivial, @nccurve), *MAP-only encoding* (MAP root accuracy is only $0.47$ while the full-simplex $R^2$ is positive and graded — a vertex-collapsed representation would give near-perfect MAP accuracy), and *flat-with-depth* (probe $R^2$ rises $-0.00 -> 0.15 -> 0.38$ across readout points).
+The fourth, a *non-linear-only encoding*, we did not test separately — we fit no nonlinear probe — but the graded *linear* $R^2$ already establishes a substantial linearly-decodable component, which is what that mode would have denied.
 
 == Brief summary of the robustness study results.
 To test whether the observations hold across different setups, we have varied the following:
@@ -344,13 +360,13 @@ Respective setup-specific and sweep-specific observations can be seen in the @ap
 Everything so far lives on a tree whose belief, given the full leaf string, collapses to *certainty*: with uniform unambiguous rules the eight leaves invert level-by-level to exactly one root, so the $k = 8$ posterior is a delta and the belief path runs from the prior straight to a simplex vertex.
 Yet #cite(<shai2026>, form: "prose") considered another setup: there, for HMMs, belief never collapses to a single certain state.
 There, belief traces a fractal (Sierpinski-like, self-similar, recurrent) attractor.
-But RHM has no recurrence, so "slow forgetting" #todoai[unclear from this text what does slow forgetting means, introduce in 2-3 words injected here somewhere] has no analog.
+But RHM has no recurrence, so "slow forgetting" — an HMM's belief only gradually losing information about the distant past — has no analog.
 A possible analog of "the state can't be restored" is a *non-invertible observation channel*: a grammar where even the full leaf string leaves the root uncertain, so the reachable-belief set is a non-trivial attractor in the simplex rather than a path to a vertex.
 
 We add two per-level knobs to the grammar (`rhm.py`, both reducing exactly to the canonical RHM at their off setting).
 - *Ambiguity* $rho$ shares a fraction of the $v dot m$ rule entries' child-tuples *across parents* (many-to-one leaf#text[→]root structure); $rho in {0, 0.3, 0.6}$. This knob actually introduces non-invertibility of the latents. 
 - *Skew* draws each parent's rule-choice probabilities non-uniform from a Dirichlet with concentration $alpha$: `none` is the canonical uniform $1\/m$; `mid` uses $alpha = 1.0$ and `high` uses $alpha = 0.2$ (smaller $alpha$ #text[⇒] more peaked, near-deterministic rule choice). This is a control node that just complicates the invertibility logic with uneven branching. 
-Both belief propagation and the brute-force reference #todoai[ensure, earlier in the main chapter we have derived both of them] were generalized to *weighted* sum-product using the same probabilities the sampler uses; the BP#text[↔] brute-force agreement holds to $2.5 times 10^(-16)$ under both knobs simultaneously.
+Both belief propagation and the brute-force reference (both derived in @beliefs) were generalized to *weighted* sum-product using the same probabilities the sampler uses; the BP#text[↔] brute-force agreement holds to $2.5 times 10^(-16)$ under both knobs simultaneously.
 We sweep the full $3 times 3$ grid $times$ 3 rule-table draws — *27 runs* #footnote[at the pinned published arch (`run_noncollapse.py`, writing `results/noncollapse/`), with the $("none", "none")$ cell reproducing the pass-1 baseline].
 
 
@@ -358,7 +374,7 @@ We naturally observe the mean ground truth $k = 8$ root-posterior entropy is $0$
 At $rho = 0$ the belief collapses cleanly to $0$ by $k = 8$ (the bloom-to-vertex), while at $rho = 0.3$ and $rho = 0.6$ it reaches positive floor. 
 
 #fig("figures/noncollapse_curve.png",
-  [Ambiguity, not skew, engineers non-triviality #todoai[drop the word "plateau" from the right image title, and replace the word "non-collapse" with "non-triviality" on the left image title].
+  [Ambiguity, not skew, engineers non-triviality.
    *Left:* mean ground truth $k = 8$ root posterior entropy vs ambiguity $rho$, one line per skew (error bars over 3 draws).
    At $rho = 0$ entropy is exactly $0$ for *every* skew — skew alone does not prevent collapse, and it rises monotonically with $rho$.
    *Right:* the full entropy-vs-context trajectory at `skew=none`; at $rho = 0$ the belief collapses to $0$ by $k = 8$, at $rho > 0$ it reaches a positive floor.],
@@ -398,7 +414,9 @@ Our key findings are thus the following:
 *(iv)* The belief recovery is impartial despite the exact belief state being known.
 *(v)* Uncertain grammars (the ones where the exact belief state is not a delta) are *better* decodable than the unambiguous ones, and probe sharpens as uncertainty grows.
 
-This reproduces the core Simplex belief-geometry phenomenology in a setting where the exact belief state is known exactly #todoai[does it? didn't they claim perfect recovery...].
+This reproduces the core Simplex belief-geometry phenomenology — linear decodability, simplex geometry, and causal use — in a setting where the exact belief state is known.
+The match is at the level of phenomenology, not of fidelity or mechanism: our linear recovery is *partial* ($R^2 = 0.38$ for the root), and #cite(<shai2026>, form: "prose") likewise report a probed, imperfect image rather than perfect recovery.
+The generative settings differ too — their HMM mixes toward a fractal attractor, whereas the RHM tree collapses deterministically to a simplex vertex at full context.
 
 == Speculations
 Oleg: 
@@ -432,11 +450,11 @@ On an exactly-solvable#todooleg[strictly] hierarchical grammar, a small transfor
 #bibliography("references.yml", title: none, style: "american-psychological-association")
 
 #text(size: 9.5pt)[
-  Project sources: `spec.md` #todoai[drop mentions of specs from the text], `spec-grammar-sweep.md`, `PREREGISTRATION.md`,
+  Project sources: `PREREGISTRATION.md`,
   `EXECUTION_OUTPUT.md`, `results/analysis.json`, `results/root_reconstruction.json`,
   `artifacts/train_summary.json`. Grammar sweep: `sweep.py`, `sweep.yaml`,
   `results/sweep/g*/{config.json,analysis.json}`, `figures/sweep_sanity.csv`.
-  Architecture sweep: `spec-arch-sweep.md`, `run_arch.py`,
+  Architecture sweep: `run_arch.py`,
   `results/arch/g*/{config.json,analysis.json}`, `figures/arch_sanity.csv`.
 ]
 
@@ -446,7 +464,10 @@ On an exactly-solvable#todooleg[strictly] hierarchical grammar, a small transfor
 
 = Appendix: Robustness studies <appendix-robustness>
 
-#todoai[summarize what these studies will be in a paragraph, their findings in two sentences.]
+The main text rests on one grammar and one training run, so this appendix asks whether the findings are properties of the RHM family rather than of a single draw or a single architecture.
+It reports three sweeps: across grammars (10 grammars $times$ 3 seeds), across model capacity (11 architecture configs $times$ 3 grammars $times$ 3 seeds, one axis at a time), and one tree level deeper ($L = 4$; 10 grammars $times$ 2 model depths $times$ 3 seeds).
+The four core findings — the inverted level gradient, blooming, layer accumulation, and causal steering — replicate across all ten grammars with low replicate variance, and the decodability holds across capacity (rising with width and depth, weakest dependence on head count).
+The depth-$4$ sweep further refines the level gradient into an *inverted U*: mid-level latents decode most strongly, with both the coarse root and the most-local leaf-parents falling off.
 
 == Generalization across grammars
 
@@ -624,7 +645,8 @@ No edge skips a level, which is the "no cross-level ambiguity" property by const
 
 #fig("figures/ruletable_graph.png",
   [The frozen rule table of @ruletable redrawn as a DAG.
-   Each of the eight symbols `S1`-`S8` appears once per level; its two production rules are drawn in two distinct colors (one per rule), chosen so that neither a node's own two colors nor neighboring nodes' colors are easily confused.#todoai[can we illustrate the introduced ambiguity here somehow: what two readings are possible?]], w: 100%) <ruletablegraph>
+   Each of the eight symbols `S1`-`S8` appears once per level; its two production rules are drawn in two distinct colors (one per rule), chosen so that neither a node's own two colors nor neighboring nodes' colors are easily confused.
+   This grammar is *unambiguous*: no two rules (across all parents at a level) share a child pair, so every child pair has a unique parent and no leaf substring admits two readings — see @appendix-example-grammars for a grammar where ambiguity is deliberately introduced and several parents' edges converge on a shared child pair.], w: 100%) <ruletablegraph>
 
 = Appendix: Skewed and ambiguous example grammars <appendix-example-grammars>
 
@@ -635,7 +657,7 @@ Both tables and graphs are generated directly from the saved arrays, not hand-tr
 #include "figures/ruletable_skew.typ"
 
 #fig("figures/ruletable_graph_skew.png",
-  [The skewed grammar as a DAG. #todoai[while drawing this tree we've added these beautiful colored squares to edges. Let's add them to the other two tree visualizations. Given there the probabilities are uniform, the squares will be just 0.5 everywhere. They just make the edges more visually informative.]
+  [The skewed grammar as a DAG.
    Each of a parent's four outgoing edges carries a small colored square near the parent holding its rule's exact choice probability ($alpha = 0.2$ symmetric Dirichlet draw; also in the table cells) — a rule's two edges share colour and value, and the four squares are stacked at fixed symmetric slots (two above, two below) so they stay aligned and never overlap.
    Edge linewidth is proportional to the probability, so a near-deterministic parent (one rule $approx 1$) shows thick edges with $1.00$ squares for its dominant rule and faint, thin edges with $0.00$ squares for the near-zero alternative.],
   w: 100%) <ruletablegraphskew>

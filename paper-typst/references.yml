@@ -11,6 +11,17 @@ cagnetta2025:
     arxiv: "2505.07070"
   url: "https://arxiv.org/abs/2505.07070"
 
+hewitt2019:
+  type: article
+  title: "Designing and Interpreting Probes with Control Tasks"
+  author:
+    - "Hewitt, John"
+    - "Liang, Percy"
+  date: 2019
+  serial-number:
+    arxiv: "1909.03368"
+  url: "https://arxiv.org/abs/1909.03368"
+
 shai2026:
   type: article
   title: "Transformers learn factored representations"
