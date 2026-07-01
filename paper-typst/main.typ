@@ -644,12 +644,13 @@ graphs are generated directly from the saved arrays, not hand-transcribed.
 #include "figures/ruletable_skew.typ"
 
 #fig("figures/ruletable_graph_skew.png",
-  [The skewed grammar as a DAG. Each rule's exact choice probability ($alpha = 0.2$ symmetric
-   Dirichlet draw; also listed in the table cells) is shown in a small colored square placed
-   near the parent, from which the rule's two child edges emanate; the square is colored by
-   rule and edge linewidth is proportional to the probability. A near-deterministic parent
-   (one rule $approx 1$) thus shows a thick edge and a $1.00$ square for its dominant rule and
-   a faint, thin edge with a $0.00$ square for the near-zero alternative.],
+  [The skewed grammar as a DAG. Each of a parent's four outgoing edges carries a small colored
+   square near the parent holding its rule's exact choice probability ($alpha = 0.2$ symmetric
+   Dirichlet draw; also in the table cells) — a rule's two edges share colour and value, and
+   the four squares are stacked at fixed symmetric slots (two above, two below) so they stay
+   aligned and never overlap. Edge linewidth is proportional to the probability, so a
+   near-deterministic parent (one rule $approx 1$) shows thick edges with $1.00$ squares for
+   its dominant rule and faint, thin edges with $0.00$ squares for the near-zero alternative.],
   w: 100%) <ruletablegraphskew>
 
 #include "figures/ruletable_amb.typ"

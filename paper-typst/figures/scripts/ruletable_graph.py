@@ -71,30 +71,30 @@ def draw_grammar(g, out_path, show_weights=False, title=None):
                 p_rule = float(rule_probs[parent, ri])
                 child_ids = [int(rules[parent, ri, j]) for j in range(rules.shape[2])]
                 if show_weights:
-                    # Intermediate square node near the parent carrying the rule's
-                    # choice probability; BOTH child edges emanate from it, so the
-                    # weight labels sit in non-overlapping squares (fixes the clutter
-                    # of floating labels). Square color = edge color; linewidth ∝ prob.
+                    # One square per OUTGOING EDGE (rule x child-slot) = 4 per parent,
+                    # at fixed, symmetric vertical slots near the parent (two above, two
+                    # below, evenly stacked, grouped by rule so a rule's two squares
+                    # share colour + weight). Fixed slots => squares are always aligned
+                    # and never overlap, regardless of where the children sit.
                     lw = max(0.5, min(3.2, 0.5 + 2.7 * p_rule))
-                    child_xy = [node_xy[(c + 1, ch)] for ch in child_ids]
-                    mcx = sum(x for x, _ in child_xy) / len(child_xy)
-                    mcy = sum(y for _, y in child_xy) / len(child_xy)
-                    t = 0.18  # much closer to the parent than to the children
-                    sx = px + t * (mcx - px)
-                    sy = py + t * (mcy - py) + (ri - (m - 1) / 2) * 0.42  # split rules
-                    ax.plot([px, sx], [py, sy], color=color, lw=lw, alpha=0.55,
-                            zorder=2, solid_capstyle="round")
-                    for cx, cy in child_xy:
+                    r_, g_, b_ = color
+                    tc = "black" if (0.299 * r_ + 0.587 * g_ + 0.114 * b_) > 0.55 else "white"
+                    sx = px + 0.16 * (x_cols[c + 1] - px)  # close to the parent
+                    dy = 0.34
+                    for j, child in enumerate(child_ids):
+                        k = ri * rules.shape[2] + j  # slot 0..3, top -> bottom
+                        sy = py + (1.5 - k) * dy
+                        cx, cy = node_xy[(c + 1, child)]
+                        ax.plot([px, sx], [py, sy], color=color, lw=lw, alpha=0.5,
+                                zorder=2, solid_capstyle="round")
                         ax.add_patch(FancyArrowPatch(
                             (sx, sy), (cx, cy), arrowstyle="-|>", mutation_scale=9,
                             color=color, lw=lw, alpha=0.5, zorder=2,
-                            shrinkA=7, shrinkB=15))
-                    r_, g_, b_ = color
-                    tc = "black" if (0.299 * r_ + 0.587 * g_ + 0.114 * b_) > 0.55 else "white"
-                    ax.text(sx, sy, f"{p_rule:.2f}", fontsize=6.5, color=tc,
-                            ha="center", va="center", zorder=7, fontweight="bold",
-                            bbox=dict(boxstyle="square,pad=0.28", fc=color, ec="black",
-                                      lw=0.4, alpha=0.95))
+                            shrinkA=6, shrinkB=15))
+                        ax.text(sx, sy, f"{p_rule:.2f}", fontsize=6, color=tc,
+                                ha="center", va="center", zorder=7, fontweight="bold",
+                                bbox=dict(boxstyle="square,pad=0.25", fc=color,
+                                          ec="black", lw=0.4, alpha=0.95))
                     continue
                 # base / ambiguous: curved edges, uniform width (unchanged)
                 for j in range(rules.shape[2]):
