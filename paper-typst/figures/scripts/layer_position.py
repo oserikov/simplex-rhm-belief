@@ -71,3 +71,39 @@ out = os.path.join(OUTDIR, "layer_position.png")
 plt.savefig(out)
 plt.close()
 print("wrote", out, os.path.getsize(out), "bytes")
+
+# ---- RMSE variant ------------------------------------------------------
+layer_rmse = np.array(A["layer_rmse"])
+shuf_rmse = np.array(A["layer_rmse_shuffled"])
+heat_rmse = np.array(A["heatmap_layer_position_rmse"])
+assert layer_rmse.size == nL, "layer dims mismatch"
+print("layer_rmse", layer_rmse, "shuffled", shuf_rmse, "heat", heat_rmse.shape)
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.2),
+                               gridspec_kw={"width_ratios": [1, 1.25]})
+ax1.plot(lx, layer_rmse, "-o", color=pal[0], lw=2.2, ms=9, label="probe RMSE")
+ax1.plot(lx, shuf_rmse, "--s", color=pal[3], lw=2.0, ms=7, label="shuffled-label control")
+ax1.set_xticks(lx)
+ax1.set_xticklabels([f"Layer {i}" for i in lx])
+ax1.set_ylabel("Root posterior RMSE")
+ax1.set_title("Decodability (RMSE) accumulates across layers")
+ax1.legend(loc="upper left")
+for i, y in enumerate(layer_rmse):
+    ax1.annotate(f"{y:.2f}", (lx[i], y), textcoords="offset points",
+                 xytext=(0, 9), ha="center", fontsize=9)
+
+heat_annot_rmse = np.vectorize(fmt_r2)(heat_rmse)
+hm = sns.heatmap(heat_rmse, ax=ax2, cmap="viridis", vmin=0,
+                 annot=heat_annot_rmse, fmt="", annot_kws={"size": 8},
+                 cbar_kws={"label": "RMSE color scale"},
+                 linewidths=0.5, linecolor="white")
+ax2.set_xlabel("Context position $k$")
+ax2.set_ylabel("Layer")
+ax2.set_yticklabels([f"{i}" for i in range(nL)], rotation=0)
+ax2.set_title("RMSE(layer, position)")
+
+plt.tight_layout()
+out = os.path.join(OUTDIR, "layer_position_rmse.png")
+plt.savefig(out)
+plt.close()
+print("wrote", out, os.path.getsize(out), "bytes")

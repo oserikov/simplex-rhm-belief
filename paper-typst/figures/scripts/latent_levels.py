@@ -51,3 +51,24 @@ out = os.path.join(OUTDIR, "latent_levels.png")
 plt.savefig(out)
 plt.close()
 print("wrote", out, os.path.getsize(out), "bytes")
+
+# ---- RMSE variant ------------------------------------------------------
+lv_rmse = A["latent_level_rmse"]
+rmse_vals = [lv_rmse[k] for k in order]
+print("latent_level_rmse", list(zip(order, rmse_vals, strict=True)))
+
+fig, ax = plt.subplots(figsize=(9.5, 5.2))
+bars = ax.bar(range(len(rmse_vals)), rmse_vals, color=colors, edgecolor="0.2", width=0.7)
+ax.set_xticks(range(len(rmse_vals)))
+ax.set_xticklabels(labels)
+ax.set_ylabel("Linear probe RMSE")
+ax.set_xlabel("Latent variable (global root → local leaf-level)")
+ax.set_title("Local latents are generally more strongly encoded (RMSE)")
+for i, v in enumerate(rmse_vals):
+    ax.annotate(f"{v:.2f}", (i, v), textcoords="offset points",
+                xytext=(0, 6), ha="center", fontsize=10)
+plt.tight_layout()
+out = os.path.join(OUTDIR, "latent_levels_rmse.png")
+plt.savefig(out)
+plt.close()
+print("wrote", out, os.path.getsize(out), "bytes")

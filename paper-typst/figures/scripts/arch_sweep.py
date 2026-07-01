@@ -81,6 +81,11 @@ def level_value(A, level):
     return float(np.mean([lv[k] for k in LEVELS[level]]))
 
 
+def level_value_rmse(A, level):
+    lv = A["latent_level_rmse"]
+    return float(np.mean([lv[k] for k in LEVELS[level]]))
+
+
 def on_axis_slice(axis):
     """Runs that vary `axis` while the other three axes sit at baseline."""
     others = [a for a in AXES if a != axis]
@@ -130,6 +135,43 @@ def fig_marginal():
         print("  ", k, v)
 
 
+# ---- 1b. marginal-effect curves, RMSE-valued --------------------------------
+def fig_marginal_rmse():
+    fig, axes = plt.subplots(2, 2, figsize=(12.5, 9))
+    summary = {}
+    for ax, axis in zip(axes.flat, AXES, strict=False):
+        slice_runs = on_axis_slice(axis)
+        xs = sorted({r["cfg"][axis] for r in slice_runs})
+        for level in LEVELS:
+            means, errs = [], []
+            for x in xs:
+                vals = [level_value_rmse(r["A"], level)
+                        for r in slice_runs if r["cfg"][axis] == x]
+                means.append(np.mean(vals))
+                errs.append(np.std(vals) / np.sqrt(max(len(vals), 1)))
+            ax.errorbar(range(len(xs)), means, yerr=errs, marker="o",
+                        capsize=3, lw=2, color=LEVEL_COLOR[level], label=level)
+            summary[(axis, level)] = list(
+                zip(xs, [round(m, 3) for m in means], strict=False))
+        ax.set_xticks(range(len(xs)))
+        ax.set_xticklabels([str(x) for x in xs])
+        ax.set_xlabel(AXIS_LABEL[axis])
+        ax.set_ylabel("Linear probe RMSE")
+        ax.axvline(xs.index(BASE[axis]), color="0.6", ls=":", lw=1, zorder=0)
+        ax.set_title(f"RMSE vs {AXIS_LABEL[axis]}")
+    axes.flat[0].legend(title="tree level", loc="upper right")
+    fig.suptitle("Marginal capacity effects on belief decodability (RMSE)\n"
+                 "(OAT around L2·d128·h4·t4000; error bars = SEM over "
+                 "3 grammars × 3 seeds)", y=1.00)
+    plt.tight_layout()
+    out = os.path.join(OUTDIR, "arch_marginal_rmse.png")
+    plt.savefig(out)
+    plt.close()
+    print("wrote", out, os.path.getsize(out), "bytes")
+    for k, v in summary.items():
+        print("  ", k, v)
+
+
 # ---- 2. depth & accumulation -----------------------------------------------
 def fig_depth_accum():
     depth_runs = on_axis_slice("n_layer")
@@ -170,6 +212,45 @@ def fig_depth_accum():
           {L: round(final_by_L[L][0], 3) for L in Ls})
 
 
+# ---- 2b. depth & accumulation, RMSE-valued ----------------------------------
+def fig_depth_accum_rmse():
+    depth_runs = on_axis_slice("n_layer")
+    by_L = {}
+    for r in depth_runs:
+        by_L.setdefault(r["cfg"]["n_layer"], []).append(r["A"]["layer_rmse"])
+    fig, ax = plt.subplots(1, 2, figsize=(12.5, 4.8))
+    cmap = sns.color_palette("viridis", len(by_L))
+    final_by_L = {}
+    for c, (L, curves) in zip(cmap, sorted(by_L.items()), strict=False):
+        curves = np.array(curves)            # (reps, n_layer+1)
+        mean = curves.mean(0)
+        sem = curves.std(0) / np.sqrt(curves.shape[0])
+        norm = np.arange(len(mean)) / (len(mean) - 1)
+        ax[0].errorbar(norm, mean, yerr=sem, marker="o", color=c, lw=2,
+                       capsize=2, label=f"n_layer={L}")
+        final_by_L[L] = (mean[-1], sem[-1])
+    ax[0].set_xlabel("normalized depth  (residual index / n_layer)")
+    ax[0].set_ylabel("root-belief probe RMSE")
+    ax[0].set_title("Belief accumulates across depth (RMSE)")
+    ax[0].legend(title="depth")
+
+    Ls = sorted(final_by_L)
+    ax[1].errorbar(Ls, [final_by_L[L][0] for L in Ls],
+                   yerr=[final_by_L[L][1] for L in Ls],
+                   marker="s", color=CB[3], lw=2, capsize=3)
+    ax[1].set_xticks(Ls)
+    ax[1].set_xlabel("n_layer")
+    ax[1].set_ylabel("final-layer root RMSE")
+    ax[1].set_title("Deeper models lift the final readout (RMSE)")
+    plt.tight_layout()
+    out = os.path.join(OUTDIR, "arch_depth_accum_rmse.png")
+    plt.savefig(out)
+    plt.close()
+    print("wrote", out, os.path.getsize(out), "bytes")
+    print("  final root RMSE by n_layer:",
+          {L: round(final_by_L[L][0], 3) for L in Ls})
+
+
 # ---- 3. loss-fit vs decodability scatter (all runs) ------------------------
 def fig_lossfit():
     lgc, root, leaf = [], [], []
@@ -204,6 +285,40 @@ def fig_lossfit():
     print("wrote", out, os.path.getsize(out), "bytes")
 
 
+# ---- 3b. loss-fit vs decodability scatter, RMSE-valued ---------------------
+def fig_lossfit_rmse():
+    lgc, root, leaf = [], [], []
+    for r in RUNS:
+        lgc.append(r["A"]["sanity"]["loss_gap_closed"])
+        root.append(level_value_rmse(r["A"], "L0 (root)"))
+        leaf.append(level_value_rmse(r["A"], "L2 (leaf-parent)"))
+    lgc, root, leaf = map(np.array, (lgc, root, leaf))
+    fig, ax = plt.subplots(figsize=(8.5, 6))
+    ax.scatter(lgc, root, s=34, alpha=0.75, color=LEVEL_COLOR["L0 (root)"],
+               label="root (L0)", edgecolor="white", linewidth=0.4)
+    ax.scatter(lgc, leaf, s=34, alpha=0.75, color=LEVEL_COLOR["L2 (leaf-parent)"],
+               label="leaf-parent (L2)", edgecolor="white", linewidth=0.4)
+    for y, col in ((root, LEVEL_COLOR["L0 (root)"]),
+                   (leaf, LEVEL_COLOR["L2 (leaf-parent)"])):
+        if len(np.unique(lgc)) > 1:
+            b, a = np.polyfit(lgc, y, 1)
+            xs = np.linspace(lgc.min(), lgc.max(), 50)
+            ax.plot(xs, a + b * xs, color=col, lw=1.5, ls="--", alpha=0.8)
+            r = np.corrcoef(lgc, y)[0, 1]
+            print(f"  corr(loss_gap_closed, {'root' if col==LEVEL_COLOR['L0 (root)'] else 'leaf'})"
+                  f" rmse = {r:.3f}")
+    ax.set_xlabel("loss gap closed  (CE: uniform → Bayes floor)")
+    ax.set_ylabel("Linear probe RMSE")
+    ax.set_title("Decodability (RMSE) vs loss fit across all 99 runs\n"
+                 "(does belief geometry just track how well the model fit?)")
+    ax.legend(title="tree level")
+    plt.tight_layout()
+    out = os.path.join(OUTDIR, "arch_lossfit_rmse.png")
+    plt.savefig(out)
+    plt.close()
+    print("wrote", out, os.path.getsize(out), "bytes")
+
+
 # ---- 4. per-run sanity table (CSV, read by the typst appendix) -------------
 def table_sanity():
     rows = []
@@ -218,6 +333,8 @@ def table_sanity():
             "loss_gap_closed": round(s["loss_gap_closed"], 3),
             "root_r2": round(s["root_r2"], 3),
             "deepest_r2": round(s["deepest_r2"], 3),
+            "root_rmse": round(s["root_rmse"], 3),
+            "deepest_rmse": round(s["deepest_rmse"], 3),
         })
     df = (pd.DataFrame(rows)
           .sort_values(["n_layer", "n_embd", "n_head", "steps", "grammar", "seed"])
@@ -233,6 +350,9 @@ def table_sanity():
 
 if __name__ == "__main__":
     fig_marginal()
+    fig_marginal_rmse()
     fig_depth_accum()
+    fig_depth_accum_rmse()
     fig_lossfit()
+    fig_lossfit_rmse()
     table_sanity()

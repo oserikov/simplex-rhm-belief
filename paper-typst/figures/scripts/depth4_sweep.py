@@ -62,6 +62,11 @@ def level_means_per_run(r):
     return {label: float(np.mean([lv[k] for k in keys])) for label, keys in LEVELS.items()}
 
 
+def level_rmse_means_per_run(r):
+    lv = r["A"]["latent_level_rmse"]
+    return {label: float(np.mean([lv[k] for k in keys])) for label, keys in LEVELS.items()}
+
+
 # ---- 1. per-level R^2 distribution across the four levels -------------------
 def fig_level_r2():
     recs = []
@@ -85,6 +90,35 @@ def fig_level_r2():
     ax.legend()
     plt.tight_layout()
     out = os.path.join(OUTDIR, "depth4_level_r2.png")
+    plt.savefig(out); plt.close()
+    print("wrote", out, os.path.getsize(out), "bytes")
+    print("  level means:", {k: round(v, 3) for k, v in means.items()})
+    return means
+
+
+# ---- 1b. per-level RMSE distribution across the four levels -----------------
+def fig_level_rmse():
+    recs = []
+    for r in RUNS:
+        for label, val in level_rmse_means_per_run(r).items():
+            recs.append({"level": label, "RMSE": val,
+                         "grammar": r["cfg"]["grammar"], "n_layer": r["cfg"]["n_layer"]})
+    df = pd.DataFrame(recs)
+    order = list(LEVELS)
+    fig, ax = plt.subplots(figsize=(9, 5.4))
+    sns.violinplot(data=df, x="level", y="RMSE", order=order, ax=ax,
+                   inner=None, cut=0, color="0.85", linewidth=1)
+    sns.stripplot(data=df, x="level", y="RMSE", order=order, ax=ax,
+                  color=CB[0], size=4, alpha=0.7, jitter=0.18)
+    means = df.groupby("level")["RMSE"].mean().reindex(order)
+    ax.plot(range(len(order)), means.values, "D", color=CB[3], markersize=9, label="mean")
+    ax.set_xlabel("Tree level of the decoded latent (root → leaf-parent)")
+    ax.set_ylabel("Linear probe RMSE")
+    ax.set_title("L=4 per-level probe strength (RMSE)\n"
+                 f"({len(RUNS)} runs = 10 grammars × 3 seeds × n_layer∈{{2,3}})")
+    ax.legend()
+    plt.tight_layout()
+    out = os.path.join(OUTDIR, "depth4_level_rmse.png")
     plt.savefig(out); plt.close()
     print("wrote", out, os.path.getsize(out), "bytes")
     print("  level means:", {k: round(v, 3) for k, v in means.items()})
@@ -141,6 +175,31 @@ def fig_layer_r2():
     return summary
 
 
+# ---- 3b. layer-wise root-belief RMSE accumulation, split by n_layer --------
+def fig_layer_rmse():
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    summary = {}
+    for nl, color in zip((2, 3), (CB[0], CB[3]), strict=False):
+        curves = [r["A"]["layer_rmse"] for r in RUNS if r["cfg"]["n_layer"] == nl]
+        if not curves:
+            continue
+        curves = np.array(curves)
+        x = np.arange(curves.shape[1])
+        m, sd = curves.mean(0), curves.std(0)
+        ax.plot(x, m, "-o", color=color, lw=2, label=f"n_layer={nl}  ({len(curves)} runs)")
+        ax.fill_between(x, m - sd, m + sd, color=color, alpha=0.15)
+        summary[nl] = m.tolist()
+    ax.set_xlabel("layer (0 = token+pos embedding)")
+    ax.set_ylabel("root-belief probe RMSE")
+    ax.set_title("Belief accumulates across layers at L=4 (RMSE)")
+    ax.legend()
+    plt.tight_layout()
+    out = os.path.join(OUTDIR, "depth4_layer_rmse.png")
+    plt.savefig(out); plt.close()
+    print("wrote", out, os.path.getsize(out), "bytes")
+    return summary
+
+
 # ---- 4. steering: wrong-latent log-p collapse ------------------------------
 def fig_steering():
     curves, collapse, alphas = [], [], None
@@ -188,6 +247,8 @@ def table_sanity():
             "loss_gap_closed": round(s["loss_gap_closed"], 3),
             "root_r2": round(s["root_r2"], 3),
             "deepest_r2": round(s["deepest_r2"], 3),
+            "root_rmse": round(s["root_rmse"], 3),
+            "deepest_rmse": round(s["deepest_rmse"], 3),
         })
     df = pd.DataFrame(rows).sort_values(["grammar", "seed", "n_layer"]).reset_index(drop=True)
     out = os.path.join(OUTDIR, "depth4_sanity.csv")
@@ -207,8 +268,10 @@ def l3_n2_root_mean():
 
 if __name__ == "__main__":
     means = fig_level_r2()
+    fig_level_rmse()
     rad_mean, ent_mean = fig_blooming()
     layer_summary = fig_layer_r2()
+    fig_layer_rmse()
     collapse_mean, collapse_sd = fig_steering()
     df = table_sanity()
 

@@ -53,6 +53,7 @@ def load_runs(dirs):
         cfg = manifest["config"]
         nc = A.get("noncollapse", {})
         lv = A["latent_level_r2"]
+        lv2 = A["latent_level_rmse"]
         rows.append({
             "name": os.path.basename(d), "dir": d,
             "skew": cfg.get("skew", "none"),
@@ -63,6 +64,10 @@ def load_runs(dirs):
             "mid_r2": float(np.mean([lv[k] for k in MID_KEYS])),
             "low_r2": float(np.mean([lv[k] for k in LOW_KEYS])),
             "shuffled_r2": float(A["layer_r2_shuffled"][-1]),
+            "root_rmse": lv2["root_L0"],
+            "mid_rmse": float(np.mean([lv2[k] for k in MID_KEYS])),
+            "low_rmse": float(np.mean([lv2[k] for k in LOW_KEYS])),
+            "shuffled_rmse": float(A["layer_rmse_shuffled"][-1]),
             "k8_entropy": float(nc.get("root_entropy_full_context", np.nan)),
             "eff_dim": float(nc.get("reachable_eff_dim", np.nan)),
             "hull_area": float(nc.get("reachable_hull_area", np.nan)),
@@ -145,6 +150,31 @@ def fig_heatmap():
     fig.savefig(p); plt.close(fig); return p
 
 
+# ---- 2b. probe-robustness heatmap, RMSE-valued ------------------------------
+def fig_heatmap_rmse():
+    fig, ax = plt.subplots(1, 3, figsize=(17, 5))
+    for k, (metric, title) in enumerate([
+        ("root_rmse", "Root (L0) probe RMSE"),
+        ("mid_rmse", "Mid (L1) probe RMSE"),
+        ("low_rmse", "Low (L2) probe RMSE"),
+    ]):
+        M, S = _grid(metric)
+        sh = DF.shuffled_rmse.mean()
+        annot = np.empty_like(M, dtype=object)
+        for i in range(M.shape[0]):
+            for j in range(M.shape[1]):
+                annot[i, j] = f"{M[i, j]:.2f}\n±{S[i, j]:.2f}"
+        sns.heatmap(M, annot=annot, fmt="", cmap="viridis", vmin=0,
+                    xticklabels=[f"{a:g}" for a in AMB_ORDER],
+                    yticklabels=SKEW_ORDER, ax=ax[k], cbar=k == 2,
+                    annot_kws={"fontsize": 9})
+        ax[k].set_title(f"{title}\n(shuffled baseline ≈ {sh:.02f})")
+        ax[k].set_xlabel(r"ambiguity $\rho$"); ax[k].set_ylabel("skew" if k == 0 else "")
+    fig.tight_layout()
+    p = os.path.join(OUTDIR, "noncollapse_heatmap_rmse.png")
+    fig.savefig(p); plt.close(fig); return p
+
+
 # ---- 3. attractor comparison: exact posterior + probe readout belief-PCA ----
 def _corner(skew, amb):
     sub = DF[(DF["skew"] == skew) & (np.isclose(DF["ambiguity"], amb))].sort_values("draw")
@@ -217,8 +247,9 @@ def fig_attractor():
 # ---- 4. sanity table + scored pre-registration ------------------------------
 def write_table():
     cols = ["skew", "ambiguity", "draw", "test_ce", "bayes_floor", "loss_gap_closed",
-            "root_r2", "mid_r2", "low_r2", "shuffled_r2", "k8_entropy", "eff_dim",
-            "hull_area"]
+            "root_r2", "mid_r2", "low_r2", "shuffled_r2",
+            "root_rmse", "mid_rmse", "low_rmse", "shuffled_rmse",
+            "k8_entropy", "eff_dim", "hull_area"]
     out = DF[cols].sort_values(["skew", "ambiguity", "draw"])
     p = os.path.join(OUTDIR, "noncollapse_sanity.csv")
     out.to_csv(p, index=False, float_format="%.4f"); return p
@@ -259,7 +290,7 @@ def score_prereg():
 
 
 if __name__ == "__main__":
-    for fn in (fig_curve, fig_heatmap, fig_attractor, write_table, score_prereg):
+    for fn in (fig_curve, fig_heatmap, fig_heatmap_rmse, fig_attractor, write_table, score_prereg):
         p = fn()
         sz = os.path.getsize(p)
         print(f"wrote {os.path.basename(p)} ({sz} bytes)")

@@ -82,6 +82,36 @@ def fig_level_r2():
     print("  level means:", {k: round(v, 3) for k, v in means.items()})
 
 
+# ---- 1b. per-level RMSE distribution (same as above, RMSE-valued) ----------
+def fig_level_rmse():
+    recs = []
+    for r in RUNS:
+        lv = r["A"]["latent_level_rmse"]
+        for label, keys in LEVELS.items():
+            recs.append({"level": label, "RMSE": float(np.mean([lv[k] for k in keys])),
+                         "grammar": r["cfg"]["grammar"]})
+    df = pd.DataFrame(recs)
+    fig, ax = plt.subplots(figsize=(8.5, 5.2))
+    order = list(LEVELS)
+    sns.violinplot(data=df, x="level", y="RMSE", order=order, ax=ax,
+                   inner=None, cut=0, color="0.85", linewidth=1)
+    sns.stripplot(data=df, x="level", y="RMSE", order=order, ax=ax,
+                  color=sns.color_palette("colorblind")[0], size=4, alpha=0.7, jitter=0.18)
+    means = df.groupby("level")["RMSE"].mean().reindex(order)
+    ax.plot(range(len(order)), means.values, "D", color=sns.color_palette("colorblind")[3],
+            markersize=9, label="mean")
+    ax.set_xlabel("Tree level of the decoded latent")
+    ax.set_ylabel("Linear probe RMSE")
+    ax.set_title("Inverted strength gradient replicates across grammars (RMSE)\n"
+                 f"({len(RUNS)} runs = 10 grammars × 3 seeds)")
+    ax.legend()
+    plt.tight_layout()
+    out = os.path.join(OUTDIR, "sweep_level_rmse.png")
+    plt.savefig(out); plt.close()
+    print("wrote", out, os.path.getsize(out), "bytes")
+    print("  level means:", {k: round(v, 3) for k, v in means.items()})
+
+
 # ---- 2. overlaid blooming curves (radius + entropy vs context position) ----
 def fig_blooming():
     by_g = {}
@@ -159,6 +189,8 @@ def table_sanity():
             "loss_gap_closed": round(s["loss_gap_closed"], 3),
             "root_r2": round(s["root_r2"], 3),
             "deepest_r2": round(s["deepest_r2"], 3),
+            "root_rmse": round(s["root_rmse"], 3),
+            "deepest_rmse": round(s["deepest_rmse"], 3),
         })
     df = pd.DataFrame(rows).sort_values(["grammar", "seed"]).reset_index(drop=True)
     out = os.path.join(OUTDIR, "sweep_sanity.csv")
@@ -173,6 +205,7 @@ def table_sanity():
 
 if __name__ == "__main__":
     fig_level_r2()
+    fig_level_rmse()
     fig_blooming()
     fig_steering()
     table_sanity()
