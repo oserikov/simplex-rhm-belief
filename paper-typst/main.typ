@@ -376,7 +376,7 @@ Mean exact $k = 8$ root-posterior entropy is exactly $0$ at unambiguous setup re
   [Ambiguity, not skew, engineers non-collapse. *Left:* mean exact $k = 8$ root posterior entropy vs ambiguity $rho$, one line per skew (error bars over 3 draws). At $rho = 0$ entropy is exactly $0$ for *every* skew — skew alone does not prevent collapse — and it rises monotonically with $rho$. *Right:* the full entropy-vs-context trajectory at `skew=none`; at $rho = 0$ the belief collapses to $0$ by $k = 8$, at $rho > 0$ it plateaus at a positive floor — a non-collapsing attractor.],
   w: 100%) <nccurve>
 
-*The linear probe, surprisingly, sharpens.* At every cell of the grid the residual stream still linearly encodes the (now spread) posterior well above the shuffled-label baseline of $approx -0.07$ (@ncheatmap). That baseline is the same probe refit to randomly *permuted* labels and scored on held-out data, averaged over the 27 runs — a near-zero (slightly negative) "no real signal" reference. The probe did not *degrade* as $rho$ rose: $R^2$ *rises* with ambiguity, $0.36 -> 0.42 -> 0.53$ at `skew=none`, and the mid- and low-level probes rise even more steeply ($L_1: 0.46 -> 0.71$; $L_2: 0.35 -> 0.82$). A delta-collapsed posterior is a near-constant target once the context pins it, starved of variance; a non-collapsing posterior is a richer, higher-variance, more linearly-structured signal, so linear decodability *improves*. The attractor comparison (@ncattractor) confirms it: at $rho = 0.6$ the probe readout traces the same structured interior cloud as the exact posterior, versus the vertex-bound bloom at $rho = 0$.
+*The linear probe, surprisingly, sharpens.* At every cell of the grid the residual stream still linearly encodes the (now spread) posterior well above the shuffled-label baseline of $approx -0.07$ (@ncheatmap). That baseline is the same probe refit to randomly *permuted* labels and scored on held-out data, averaged over the 27 runs — a near-zero (slightly negative) "no real signal" reference. The probe did not *degrade* as $rho$ rose: $R^2$ *rises* with ambiguity, $0.36 -> 0.42 -> 0.53$ at `skew=none`, and the mid- and low-level probes rise even more steeply ($L_1: 0.46 -> 0.71$; $L_2: 0.35 -> 0.82$). 
 
 
 
@@ -404,7 +404,7 @@ The most interesting wrinkle is the *inverted strength gradient*: the global roo
 
 = Conclusion
 
-On an exactly-solvable hierarchical grammar, a small transformer's residual stream is a linear image of the exact Bayesian belief simplex: it accumulates across depth, blooms with context, encodes the whole latent hierarchy (local latents most strongly), and is causally used. 
+On an exactly-solvable hierarchical grammar, a small transformer's residual stream is a linear image of the exact Bayesian belief simplex: it accumulates across depth, blooms with context, encodes the whole latent hierarchy (local latents most strongly), and is causally used.
 
 = References
 
@@ -630,6 +630,33 @@ colored pairs of arrows into the level below. No edge skips a level, which is th
    `S1`-`S8` appears once per level; its two production rules are drawn in two
    distinct colors (one per rule), chosen so that neither a node's own two colors
    nor neighboring nodes' colors are easily confused.], w: 100%) <ruletablegraph>
+
+= Appendix: Skewed and ambiguous example grammars <appendix-example-grammars>
+
+The main-text grammar (@ruletable) has uniform rule-choice probabilities and no shared
+child-tuples across parents. To illustrate the two knobs used by the non-collapse sweep
+(@appendix-noncollapse-sanity), this appendix shows two concrete example grammars, restored
+exactly from their saved `grammar.npz`: the draw-0, skew=high grammar
+(`results/noncollapse/skhigh_am0_g00_L2_d128_h4_t4000_s0`) and the draw-0, $rho = 0.6$
+grammar (`results/noncollapse/sknone_am0.6_g00_L2_d128_h4_t4000_s0`). Both tables and
+graphs are generated directly from the saved arrays, not hand-transcribed.
+
+#include "figures/ruletable_skew.typ"
+
+#fig("figures/ruletable_graph_skew.png",
+  [The skewed grammar as a DAG. Numbers on cells and near the start of each edge are the
+   exact rule-choice probabilities ($alpha = 0.2$ symmetric Dirichlet draw); edge linewidth
+   is proportional to the same probability, so a near-deterministic parent (one rule
+   $approx 1$) shows a thick edge for its dominant rule and a faint, thin edge for the
+   near-zero alternative.], w: 100%) <ruletablegraphskew>
+
+#include "figures/ruletable_amb.typ"
+
+#fig("figures/ruletable_graph_amb.png",
+  [The ambiguous grammar as a DAG. Rule-choice probabilities are uniform, but child-tuples
+   are shared across parents at rate $rho = 0.6$, so several parents' rules point at the
+   same child pair (bold cells in the table; edges converging on the same node in the
+   graph) -- the many-to-one structure that makes the belief non-collapsing.], w: 100%) <ruletablegraphamb>
 
 = Appendix: Per-run grammar-sweep sanity table <appendix-sanity>
 
