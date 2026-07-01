@@ -36,16 +36,24 @@ Ypred = probe.predict(X)
 pca = PCA(n_components=2, random_state=0).fit(Ytrue)
 Zt = pca.transform(Ytrue)
 Zp = pca.transform(Ypred)
+verts = pca.transform(np.eye(V))
+prior = pca.transform(np.full((1, V), 1.0 / V))[0]
 
 pos = np.tile(np.arange(P), N)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5.2), sharex=True, sharey=True)
-for ax, Z, ttl in [(ax1, Zt, "Exact Bayesian posterior"),
+for ax, Z, ttl in [(ax1, Zt, "Ground-truth posterior"),
                    (ax2, Zp, "Linear probe of residual stream")]:
-    sc = ax.scatter(Z[:, 0], Z[:, 1], c=pos, cmap="viridis", s=12, alpha=0.75,
+    sc = ax.scatter(Z[:, 0], Z[:, 1], c=pos, cmap="viridis", s=18, alpha=0.75,
                     edgecolors="none")
+    ax.scatter(verts[:, 0], verts[:, 1], marker="o", s=150, facecolors="none",
+               edgecolors="black", linewidths=1.0, zorder=6,
+               label="certainty / simplex vertices")
+    ax.scatter([prior[0]], [prior[1]], marker="P", s=130, c="crimson",
+               edgecolors="white", linewidths=1.0, zorder=6, label="uniform prior")
     ax.set_title(ttl)
     ax.set_xlabel("PC1 (arb. units)")
 ax1.set_ylabel("PC2 (arb. units)")
+ax1.legend(loc="upper right", fontsize=8, framealpha=0.9)
 ax2.text(0.03, 0.03, "held-out root R² ≈ 0.38", transform=ax2.transAxes,
          fontsize=9, va="bottom", ha="left",
          bbox=dict(boxstyle="round", fc="white", ec="0.7", alpha=0.85))

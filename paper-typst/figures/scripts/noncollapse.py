@@ -190,7 +190,7 @@ def fig_attractor():
         ref = np.vstack([exact, verts])
         (x0, y0), (x1, y1) = ref.min(0), ref.max(0)
         px, py = 0.08 * (x1 - x0), 0.08 * (y1 - y0)
-        for c, (coords, lab) in enumerate([(exact, "exact posterior"),
+        for c, (coords, lab) in enumerate([(exact, "ground-truth posterior"),
                                            (readout, "probe readout")]):
             a = ax[r, c]
             rgba = plt.cm.viridis(norm(pos[order]))
