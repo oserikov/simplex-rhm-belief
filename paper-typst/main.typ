@@ -784,6 +784,12 @@ First, the absolute magnitudes are not comparable across the two papers: their r
 Second, their per-*factor* vectors are *conditionally independent*, so the joint predictive state is their tensor product; our per-*latent* posteriors are marginals of a *dependent* joint (siblings are correlated through their shared parent, and the tree is nested, not factored), so they do not multiply back to the joint.
 The right reading of this appendix is therefore the RMSE-flavored view of *our* recovery — with the per-latent RMSE vector as the structural analog of their per-factor RMSE — not a numeric head-to-head.
 
+*Why our RMSE does not vanish the way theirs does.*
+#cite(<shai2026>, form: "prose")'s near-zero RMSE is a property of a generative process built to be *conditionally independent*: their theory predicts, and their transformer realizes, a factored representation whose per-factor beliefs sit in orthogonal linear subspaces, so the linear read-out is near-exact by construction.
+The RHM is the opposite regime — its latents are dependent and nested, the joint posterior does not factor into the per-node marginals, and next-token training only pins down what is locally predictive — so no linear map recovers the (global, non-local) root cleanly, and RMSE plateaus above zero.
+This is not a difficulty gap in the generative process but a difference in *representational linearity*: an HMM that is hard to simulate can still carry a belief that lies in a tidy linear subspace, whereas the RHM is easy to simulate yet tangles its belief across dependent latents.
+Tellingly, when #cite(<shai2026>, form: "prose") deliberately break conditional independence (their noisy-channel experiments), their factored representation turns *lossy* and their RMSE likewise stops going to zero — the regime the RHM lives in permanently.
+
 *Per-latent RMSE (canonical run).*
 The per-latent probing of @latents is the RHM analog of #cite(<shai2026>, form: "prose")'s per-factor recovery.
 @rmse-latents gives both scores side by side.
