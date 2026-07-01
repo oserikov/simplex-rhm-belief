@@ -58,15 +58,30 @@ def load_model(g: Grammar, art_dir: Path = ART):
     return model
 
 
+def rmse(pred, Y):
+    """Per-output RMSE, then averaged over the v belief components.
+
+    Matches how our R2 is aggregated (sklearn ``LinearRegression.score`` uses
+    per-output ``uniform_average``), so R2 and RMSE share the same across-output
+    averaging. See the "From R2 to RMSE" appendix.
+    """
+    return float(np.mean(np.sqrt(np.mean((pred - Y) ** 2, axis=0))))
+
+
 def fit_probe(X_tr, Y_tr, X_te, Y_te):
-    """Affine multi-output least squares; returns (probe, R2_test, R2_shuffled)."""
+    """Affine multi-output least squares.
+
+    Returns (probe, R2_test, R2_shuffled, RMSE_test, RMSE_shuffled).
+    """
     reg = LinearRegression().fit(X_tr, Y_tr)
     r2 = reg.score(X_te, Y_te)
+    rmse_val = rmse(reg.predict(X_te), Y_te)
     rng = np.random.default_rng(0)
     Y_sh = Y_tr[rng.permutation(len(Y_tr))]
     reg_sh = LinearRegression().fit(X_tr, Y_sh)
     r2_sh = reg_sh.score(X_te, Y_te)
-    return reg, r2, r2_sh
+    rmse_sh = rmse(reg_sh.predict(X_te), Y_te)
+    return reg, r2, r2_sh, rmse_val, rmse_sh
 
 
 def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
@@ -124,6 +139,7 @@ def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
         }
         deepest_prefix = "low_L2"
     level_r2 = {}
+    level_rmse = {}
     Xf_rows_tr = np.concatenate([np.arange(i * d, i * d + d) for i in tr_idx])
     Xf_rows_te = np.concatenate([np.arange(i * d, i * d + d) for i in te_idx])
     Xfinal = hidden[:, n_layers - 1].reshape(N * d, n_embd)
@@ -131,44 +147,57 @@ def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
         Yn = belief_tensor(node).reshape(N * d, v)
         reg = LinearRegression().fit(Xfinal[Xf_rows_tr], Yn[Xf_rows_tr])
         level_r2[name] = float(reg.score(Xfinal[Xf_rows_te], Yn[Xf_rows_te]))
-        print(f"latent {name}: R2={level_r2[name]:.4f}")
+        level_rmse[name] = rmse(reg.predict(Xfinal[Xf_rows_te]), Yn[Xf_rows_te])
+        print(f"latent {name}: R2={level_r2[name]:.4f} RMSE={level_rmse[name]:.4f}")
     results["latent_level_r2"] = level_r2
+    results["latent_level_rmse"] = level_rmse
 
     # ---- 1. global probe per layer (pool all positions) ----------------
     layer_r2, layer_r2_sh = [], []
+    layer_rmse, layer_rmse_sh = [], []
     probes = {}
     row_tr = np.concatenate([np.arange(i * d, i * d + d) for i in tr_idx])
     row_te = np.concatenate([np.arange(i * d, i * d + d) for i in te_idx])
     for ell in range(n_layers):
         X = hidden[:, ell].reshape(N * d, n_embd)
         Y = beliefs.reshape(N * d, v)
-        reg, r2, r2_sh = fit_probe(X[row_tr], Y[row_tr], X[row_te], Y[row_te])
+        reg, r2, r2_sh, rm, rm_sh = fit_probe(X[row_tr], Y[row_tr], X[row_te], Y[row_te])
         probes[ell] = reg
         layer_r2.append(r2)
         layer_r2_sh.append(r2_sh)
-        print(f"layer {ell}: R2={r2:.4f}  shuffled={r2_sh:.4f}")
+        layer_rmse.append(rm)
+        layer_rmse_sh.append(rm_sh)
+        print(f"layer {ell}: R2={r2:.4f}  shuffled={r2_sh:.4f}  RMSE={rm:.4f}")
     results["layer_r2"] = layer_r2
     results["layer_r2_shuffled"] = layer_r2_sh
+    results["layer_rmse"] = layer_rmse
+    results["layer_rmse_shuffled"] = layer_rmse_sh
 
     # ---- per-position R2 at the final layer ----------------------------
     final = n_layers - 1
     pos_r2 = []
+    pos_rmse = []
     Xf = hidden[:, final]
     for t in range(d):
         Xt, Yt = Xf[:, t], beliefs[:, t]
         reg = LinearRegression().fit(Xt[tr_idx], Yt[tr_idx])
         pos_r2.append(float(reg.score(Xt[te_idx], Yt[te_idx])))
+        pos_rmse.append(rmse(reg.predict(Xt[te_idx]), Yt[te_idx]))
     results["position_r2_final_layer"] = pos_r2
+    results["position_rmse_final_layer"] = pos_rmse
     print("per-position R2 (final layer):", np.round(pos_r2, 3))
 
     # per (layer,position) R2 heatmap
     heat = np.zeros((n_layers, d))
+    heat_rmse = np.zeros((n_layers, d))
     for ell in range(n_layers):
         for t in range(d):
             Xt, Yt = hidden[:, ell, t], beliefs[:, t]
             reg = LinearRegression().fit(Xt[tr_idx], Yt[tr_idx])
             heat[ell, t] = reg.score(Xt[te_idx], Yt[te_idx])
+            heat_rmse[ell, t] = rmse(reg.predict(Xt[te_idx]), Yt[te_idx])
     results["heatmap_layer_position_r2"] = heat.tolist()
+    results["heatmap_layer_position_rmse"] = heat_rmse.tolist()
 
     # MAP classification accuracy (final-layer global probe, held-out rows)
     reg = probes[final]
@@ -231,6 +260,9 @@ def analyze_run(art_dir: Path = ART, res_dir: Path = RES) -> dict:
         "root_r2": level_r2["root_L0"],
         "deepest_r2": float(np.mean([level_r2[k] for k in level_r2
                                      if k.startswith(deepest_prefix)])),
+        "root_rmse": level_rmse["root_L0"],
+        "deepest_rmse": float(np.mean([level_rmse[k] for k in level_rmse
+                                       if k.startswith(deepest_prefix)])),
     }
 
     # ============ FIGURES ============
