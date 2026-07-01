@@ -570,12 +570,10 @@ Both tables and graphs are generated directly from the saved arrays, not hand-tr
 
 = Appendix: Per-run grammar-sweep sanity table <appendix-sanity>
 
-Every run in the grammar sweep, no filtering. `grammar` indexes the rule-table
-draw (`Grammar.random(seed=grammar)`); `seed` is the master replicate seed; the
-architecture is pinned. `test_ce` is the held-out next-token cross-entropy;
-`loss_gap_closed` is the fraction of the uniform#text[→]Bayes gap closed (sanity
-covariate, not a gate); `root_r2` and `deepest_r2` are the level-$L_0$ and mean
-level-$L_2$ probe $R^2$. Loaded directly from `figures/sweep_sanity.csv`.
+Every run in the grammar sweep, no filtering.
+`grammar` indexes the rule-table draw (`Grammar.random(seed=grammar)`); `seed` is the master replicate seed; the architecture is pinned.
+`test_ce` is the held-out next-token cross-entropy; `loss_gap_closed` is the fraction of the uniform#text[→]Bayes gap closed (sanity covariate, not a gate); `root_r2` and `deepest_r2` are the level-$L_0$ and mean level-$L_2$ probe $R^2$.
+Loaded directly from `figures/sweep_sanity.csv`.
 
 #let sanity = csv("figures/sweep_sanity.csv")
 #figure(
@@ -587,19 +585,17 @@ level-$L_2$ probe $R^2$. Loaded directly from `figures/sweep_sanity.csv`.
     table.header(..sanity.at(0).map(h => [#text(8pt, weight: "bold")[#h]])),
     ..sanity.slice(1).flatten().map(c => [#text(8pt)[#c]]),
   ),
-  caption: [All 30 grammar-sweep runs (10 grammars $times$ 3 seeds), pinned
-    architecture, full 4000-step budget. No convergence filtering.],
+  caption: [All 30 grammar-sweep runs (10 grammars $times$ 3 seeds), pinned architecture, full 4000-step budget.
+    No convergence filtering.],
 ) <sanitytable>
 
 = Appendix: Per-run architecture-sweep sanity table <appendix-arch-sanity>
 
-Every run in the architecture sweep, no filtering — all 99 (11 one-axis-at-a-time capacity configs
-$times$ 3 grammars $times$ 3 seeds). `n_layer`, `n_embd`, `n_head`, `steps` give the
-capacity config; `grammar` and `seed` the replicate. `test_ce` is the held-out
-next-token cross-entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes
-gap closed (covariate, not a gate); `root_r2` and `deepest_r2` the level-$L_0$ and
-mean level-$L_2$ probe $R^2$. The deliberately-underpowered small models
-(e.g. $n_"embd" = 16$) are included. Loaded directly from `figures/arch_sanity.csv`.
+Every run in the architecture sweep, no filtering — all 99 (11 one-axis-at-a-time capacity configs $times$ 3 grammars $times$ 3 seeds).
+`n_layer`, `n_embd`, `n_head`, `steps` give the capacity config; `grammar` and `seed` the replicate.
+`test_ce` is the held-out next-token cross-entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap closed (covariate, not a gate); `root_r2` and `deepest_r2` the level-$L_0$ and mean level-$L_2$ probe $R^2$.
+The deliberately-underpowered small models (e.g. $n_"embd" = 16$) are included.
+Loaded directly from `figures/arch_sanity.csv`.
 
 #let archsanity = csv("figures/arch_sanity.csv")
 #figure(
@@ -611,20 +607,16 @@ mean level-$L_2$ probe $R^2$. The deliberately-underpowered small models
     table.header(..archsanity.at(0).map(h => [#text(7pt, weight: "bold")[#h]])),
     ..archsanity.slice(1).flatten().map(c => [#text(7pt)[#c]]),
   ),
-  caption: [All 99 architecture-sweep runs (11 one-axis-at-a-time capacity configs
-    $times$ 3 grammars $times$ 3 seeds). No convergence filtering; small models are
-    expected to underfit.],
+  caption: [All 99 architecture-sweep runs (11 one-axis-at-a-time capacity configs $times$ 3 grammars $times$ 3 seeds).
+    No convergence filtering; small models are expected to underfit.],
 ) <archsanitytable>
 
 = Appendix: Per-run $L = 4$ depth-sweep sanity table <appendix-depth4-sanity>
 
-Every run in the $L = 4$ depth sweep, no filtering — all 60 (10 grammars $times$ 3
-seeds $times$ $n_"layer" in {2, 3}$). `grammar` and `seed` index the rule-table draw
-and master replicate seed; `n_layer` is the only varied architecture axis ($n_"embd" =
-128$, $n_"head" = 4$, 4000 steps throughout). `test_ce` is the held-out next-token
-cross-entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap closed
-(covariate, not a gate); `root_r2` and `deepest_r2` the level-$L_0$ and mean
-leaf-parent-$L_3$ probe $R^2$. Loaded directly from `figures/depth4_sanity.csv`.
+Every run in the $L = 4$ depth sweep, no filtering — all 60 (10 grammars $times$ 3 seeds $times$ $n_"layer" in {2, 3}$).
+`grammar` and `seed` index the rule-table draw and master replicate seed; `n_layer` is the only varied architecture axis ($n_"embd" = 128$, $n_"head" = 4$, 4000 steps throughout).
+`test_ce` is the held-out next-token cross-entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap closed (covariate, not a gate); `root_r2` and `deepest_r2` the level-$L_0$ and mean leaf-parent-$L_3$ probe $R^2$.
+Loaded directly from `figures/depth4_sanity.csv`.
 
 #let depth4sanity = csv("figures/depth4_sanity.csv")
 #figure(
@@ -636,21 +628,16 @@ leaf-parent-$L_3$ probe $R^2$. Loaded directly from `figures/depth4_sanity.csv`.
     table.header(..depth4sanity.at(0).map(h => [#text(7pt, weight: "bold")[#h]])),
     ..depth4sanity.slice(1).flatten().map(c => [#text(7pt)[#c]]),
   ),
-  caption: [All 60 $L = 4$ depth-sweep runs (10 grammars $times$ 3 seeds $times$
-    $n_"layer" in {2, 3}$). No convergence filtering. `deepest_r2` is the mean over the
-    eight leaf-parent ($L_3$) nodes.],
+  caption: [All 60 $L = 4$ depth-sweep runs (10 grammars $times$ 3 seeds $times$ $n_"layer" in {2, 3}$).
+    No convergence filtering.
+    `deepest_r2` is the mean over the eight leaf-parent ($L_3$) nodes.],
 ) <depth4sanitytable>
 
 = Appendix: Per-run non-collapse sweep sanity table <appendix-noncollapse-sanity>
 
-Every run in the non-collapse sweep, no filtering — all 27 (3 `skew` $times$ 3
-`ambiguity` $times$ 3 rule-table draws), at the pinned arch ($n_"layer" = 2, n_"embd" =
-128, n_"head" = 4$, 4000 steps). `bayes_floor` is the exact weighted Bayes-optimal
-next-token entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap
-closed (covariate); `root_r2`/`mid_r2`/`low_r2` the level-$L_0$/$L_1$/$L_2$ probe $R^2$
-(shuffled baseline `shuffled_r2`); `k8_entropy` the headline mean $k = 8$ root posterior
-entropy; `eff_dim`/`hull_area` the reachable-set descriptors. Loaded directly from
-`figures/noncollapse_sanity.csv`.
+Every run in the non-collapse sweep, no filtering — all 27 (3 `skew` $times$ 3 `ambiguity` $times$ 3 rule-table draws), at the pinned arch ($n_"layer" = 2, n_"embd" = 128, n_"head" = 4$, 4000 steps).
+`bayes_floor` is the exact weighted Bayes-optimal next-token entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap closed (covariate); `root_r2`/`mid_r2`/`low_r2` the level-$L_0$/$L_1$/$L_2$ probe $R^2$ (shuffled baseline `shuffled_r2`); `k8_entropy` the headline mean $k = 8$ root posterior entropy; `eff_dim`/`hull_area` the reachable-set descriptors.
+Loaded directly from `figures/noncollapse_sanity.csv`.
 
 #let ncsanity = csv("figures/noncollapse_sanity.csv")
 #figure(
@@ -662,7 +649,8 @@ entropy; `eff_dim`/`hull_area` the reachable-set descriptors. Loaded directly fr
     table.header(..ncsanity.at(0).map(h => [#text(6pt, weight: "bold")[#h]])),
     ..ncsanity.slice(1).flatten().map(c => [#text(6pt)[#c]]),
   ),
-  caption: [All 27 non-collapse runs (3 skew $times$ 3 ambiguity $times$ 3 draws). No
-    filtering. `k8_entropy` $approx 0$ exactly when $rho = 0$ regardless of skew.],
+  caption: [All 27 non-collapse runs (3 skew $times$ 3 ambiguity $times$ 3 draws).
+    No filtering.
+    `k8_entropy` $approx 0$ exactly when $rho = 0$ regardless of skew.],
 ) <ncsanitytable>
 
