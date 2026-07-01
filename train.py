@@ -122,17 +122,21 @@ def seed_everything(seed: int) -> None:
         torch.mps.manual_seed(seed)
 
 
-def train(args, out_dir: Path = ART) -> dict:
+def train(args, out_dir: Path = ART, grammar=None) -> dict:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     seed_everything(args.seed)
     device = get_device()
     print(f"device={device}")
-    g = Grammar.random(s=args.s, L=args.L, v=args.v, m=args.m, seed=args.grammar_seed,
-                       ambiguity=getattr(args, "ambiguity", 0.0),
-                       skew=getattr(args, "skew", "none"))
-    print(f"grammar s={g.s} L={g.L} v={g.v} m={g.m} d={g.d} "
-          f"ambiguity={g.ambiguity} skew={g.skew}")
+    if grammar is not None:
+        g = grammar
+        print(f"grammar (injected) s={g.s} L={g.L} v={g.v} m={g.m} d={g.d}")
+    else:
+        g = Grammar.random(s=args.s, L=args.L, v=args.v, m=args.m, seed=args.grammar_seed,
+                           ambiguity=getattr(args, "ambiguity", 0.0),
+                           skew=getattr(args, "skew", "none"))
+        print(f"grammar s={g.s} L={g.L} v={g.v} m={g.m} d={g.d} "
+              f"ambiguity={g.ambiguity} skew={g.skew}")
 
     # full support of the leaf distribution; weights = P(tree) (uniform iff skew=none)
     leaves, roots, weights = g.enumerate_all()
