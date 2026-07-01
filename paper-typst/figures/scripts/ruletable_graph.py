@@ -63,14 +63,43 @@ def draw_grammar(g, out_path, show_weights=False, title=None):
     for c in range(3):
         rules = levels[c]  # (v, m, s)
         rule_probs = probs[c]  # (v, m)
+        m = rules.shape[1]
         for parent in range(v):
-            for ri in range(rules.shape[1]):
+            px, py = node_xy[(c, parent)]
+            for ri in range(m):
                 color = node_rule_color[(parent, ri)]
                 p_rule = float(rule_probs[parent, ri])
-                lw = max(0.4, min(3.0, 0.4 + 2.6 * p_rule)) if show_weights else 1.0
+                child_ids = [int(rules[parent, ri, j]) for j in range(rules.shape[2])]
+                if show_weights:
+                    # Intermediate square node near the parent carrying the rule's
+                    # choice probability; BOTH child edges emanate from it, so the
+                    # weight labels sit in non-overlapping squares (fixes the clutter
+                    # of floating labels). Square color = edge color; linewidth ∝ prob.
+                    lw = max(0.5, min(3.2, 0.5 + 2.7 * p_rule))
+                    child_xy = [node_xy[(c + 1, ch)] for ch in child_ids]
+                    mcx = sum(x for x, _ in child_xy) / len(child_xy)
+                    mcy = sum(y for _, y in child_xy) / len(child_xy)
+                    t = 0.18  # much closer to the parent than to the children
+                    sx = px + t * (mcx - px)
+                    sy = py + t * (mcy - py) + (ri - (m - 1) / 2) * 0.42  # split rules
+                    ax.plot([px, sx], [py, sy], color=color, lw=lw, alpha=0.55,
+                            zorder=2, solid_capstyle="round")
+                    for cx, cy in child_xy:
+                        ax.add_patch(FancyArrowPatch(
+                            (sx, sy), (cx, cy), arrowstyle="-|>", mutation_scale=9,
+                            color=color, lw=lw, alpha=0.5, zorder=2,
+                            shrinkA=7, shrinkB=15))
+                    r_, g_, b_ = color
+                    tc = "black" if (0.299 * r_ + 0.587 * g_ + 0.114 * b_) > 0.55 else "white"
+                    ax.text(sx, sy, f"{p_rule:.2f}", fontsize=6.5, color=tc,
+                            ha="center", va="center", zorder=7, fontweight="bold",
+                            bbox=dict(boxstyle="square,pad=0.28", fc=color, ec="black",
+                                      lw=0.4, alpha=0.95))
+                    continue
+                # base / ambiguous: curved edges, uniform width (unchanged)
                 for j in range(rules.shape[2]):
-                    child = int(rules[parent, ri, j])
-                    x0, y0 = node_xy[(c, parent)]
+                    child = child_ids[j]
+                    x0, y0 = px, py
                     x1, y1 = node_xy[(c + 1, child)]
                     gap = y1 - y0
                     edge_idx = ri * rules.shape[2] + j  # 0..3, unique per (parent, rule, slot)
@@ -82,16 +111,10 @@ def draw_grammar(g, out_path, show_weights=False, title=None):
                         (x0, y0), (x1, y1),
                         connectionstyle=f"arc3,rad={rad}",
                         arrowstyle="-|>", mutation_scale=10,
-                        color=color, lw=lw, alpha=0.55, zorder=2,
+                        color=color, lw=1.0, alpha=0.55, zorder=2,
                         shrinkA=15, shrinkB=15,
                     )
                     ax.add_patch(arrow)
-                    if show_weights:
-                        xs, ys = x0 + 0.15 * (x1 - x0), y0 + 0.15 * (y1 - y0)
-                        ax.text(xs, ys, f"{p_rule:.2f}", fontsize=6.5, color=color,
-                                ha="center", va="center", zorder=7,
-                                bbox=dict(boxstyle="round,pad=0.1", fc="white",
-                                          ec="none", alpha=0.7))
 
     ax.set_xlim(-0.6, 4.8)
     ax.set_ylim(-1.5, (v - 1) * y_scale + 1.8)
