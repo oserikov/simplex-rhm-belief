@@ -222,6 +222,9 @@ In brief, we anticipated: (1) the root posterior is *linearly decodable* from th
 We also registered alternative outcomes (degenerate collapse, non-linear-only encoding, MAP-only encoding, flat-with-depth) as falsification handles.
 We report against these predictions in @scorecard.
 
+== Methodology
+#todoai[for every question answered in the next section (Results), we should here write how this question is answered by the method we used and what results would signal what. Rather briefly.]
+
 = Results
 
 == A single linear probe partially decodes the root posterior
@@ -231,14 +234,14 @@ A single probe is fit once on all context positions pooled; we then score that s
 Because the train/test split is over whole sequences, every held-out sequence contributes one example at each of the eight positions, so each per-position score still rests on all $N = 400$ examples.
 The final-layer probe reaches $R^2 = 0.38$, while at the control task (the same probe fit to *shuffled* labels, following #cite(<hewitt2019>, form: "prose")) scores $≈ 0$ ($-0.085$).
 So the ground truth posterior is linearly accessible above chance, but the probe explains only a third of the variance: the recovery is *partial*.
-($R^2 = 0.38$ means the affine map accounts for $38%$ of the variance in the ground truth posterior vectors, where $1$ would be exact reconstruction and $0$ no better than always predicting the mean posterior.)
-Projected into a belief-space PCA basis (@simplex), the probe's predicted posteriors *visibly* occupy the same structured region as the ground truth posteriors and trace the same position gradient — a qualitative correspondence read off the projection, not a computed alignment score — but as a diffuse cloud rather than the discrete point set of the ground truth. #footnote[The ground-truth panel looks sharper partly because the ground truth posterior takes few distinct values, and identical points overplot, whereas every probe prediction differs slightly.]
+
+Projected into a belief-space PCA basis (@simplex), the probe's predicted posteriors *visibly* occupy the same structured region as the ground truth posteriors and trace the same position gradient #todooleg[qualitative judgement], but as a diffuse cloud rather than the discrete point set of the ground truth. #footnote[The ground-truth panel looks sharper partly because the ground truth posterior takes few distinct values, and identical points overplot, whereas every probe prediction differs slightly.]
 The affine correspondence is particularly weak for the root; it strengthens markedly for the deeper latents — mid-level $R^2$ of $0.51$ and $0.59$, deepest up to $0.66$ (@latents, next subsection).
 
 #fig("figures/posterior_simplex.png",
   [The residual stream is a *partial* affine image of the exact belief simplex.
    *Left:* PCA(2) of the ground truth root posteriors (few distinct values, hence sharp overplotted dots); small-$k$ points sit near the prior, large-$k$ points spread toward vertices.
-   *Right:* the linear probe's predictions *for the root posterior* in the same basis, colored by context position — the same region and a similar position gradient, but a diffuse cloud: held-out root $R^2 ≈ 0.38$, an imperfect recovery, not an exact one.
+   *Right:* the linear probe's predictions *for the root posterior* in the same basis, colored by context position — the same region and a visually similar position gradient, but a diffuse cloud (held-out root $R^2 ≈ 0.38$).
    Both panels are the *root* class specifically.],
   w: 92%) <simplex>
 
@@ -415,20 +418,22 @@ Our key findings are thus the following:
 *(v)* Uncertain grammars (the ones where the exact belief state is not a delta) are *better* decodable than the unambiguous ones, and probe sharpens as uncertainty grows.
 
 This reproduces the core Simplex belief-geometry phenomenology — linear decodability, simplex geometry, and causal use — in a setting where the exact belief state is known.
-The match is at the level of phenomenology, not of fidelity or mechanism: our linear recovery is *partial* ($R^2 = 0.38$ for the root), and #cite(<shai2026>, form: "prose") likewise report a probed, imperfect image rather than perfect recovery.
+The match is at the level of phenomenology, not of fidelity or mechanism.
+Both studies read the residual's linear image of the exact posterior with least-squares regression, but where #cite(<shai2026>, form: "prose") headline *high-fidelity* recovery of their factored HMM geometry in RMSE (decreasing toward $0$ over training), our tree-structured setting yields only a *partial* linear image (root $R^2 = 0.38$) — the RHM's compositional hierarchy appears harder to read out linearly than a factored HMM.
+We report the RMSE counterpart of every $R^2$ in @appendix-rmse for readers coming from that metric, with the caveat that absolute magnitudes are not comparable across the two setups (their target is a generalized predictive vector, ours a posterior on the simplex).
 The generative settings differ too — their HMM mixes toward a fractal attractor, whereas the RHM tree collapses deterministically to a simplex vertex at full context.
 
 == Speculations
 Oleg: 
-- what if we give some padding post-string. Will the results differ?
+- what if we give some padding post-string. Will the results differ? #todoai[an interesting quick experiment, run it.]
 - The root is worst decodable. This is due to attention having to re-store information about the tree structure, and for some reason it did not happen within one layer. Kinda beutiful, unclear why.
  - AI says: \ This is intuitive in hindsight — next-token prediction rewards representing whatever is most locally predictive — but it sharpens the belief-geometry claim: the residual stream tracks the full latent posterior, weighted toward what the task needs, not a single privileged variable.
 
 
 == Desired next steps
 - What if we consider smaller alphabets?
-- Normal language is more similar to HMMs because it allows for recursion. I think the belief propagation would be more complicated.
-- The role of enumerability: does the model learn a *general* belief-geometry principle, or does it just memorize the exact belief for this grammar? 
+- Normal language is more similar to HMMs because it allows for recursion. I think the belief propagation would be more complicated. #todoai[nice experiment. write a plan for such experiment. we introduce recursion, constrain the tree depth, derive posteriors, and see if the belief geometry is still decodable?]
+- The role of enumerability: does the model learn a *general* belief-geometry principle, or does it just memorize the exact belief for this grammar? #todoai[I think the L4 exp did answer this? No?]
 
 
 
@@ -645,8 +650,7 @@ No edge skips a level, which is the "no cross-level ambiguity" property by const
 
 #fig("figures/ruletable_graph.png",
   [The frozen rule table of @ruletable redrawn as a DAG.
-   Each of the eight symbols `S1`-`S8` appears once per level; its two production rules are drawn in two distinct colors (one per rule), chosen so that neither a node's own two colors nor neighboring nodes' colors are easily confused.
-   This grammar is *unambiguous*: no two rules (across all parents at a level) share a child pair, so every child pair has a unique parent and no leaf substring admits two readings — see @appendix-example-grammars for a grammar where ambiguity is deliberately introduced and several parents' edges converge on a shared child pair.], w: 100%) <ruletablegraph>
+   Each of the eight symbols `S1`-`S8` appears once per level; its two production rules are drawn in two distinct colors (one per rule), chosen so that neither a node's own two colors nor neighboring nodes' colors are easily confused.], w: 100%) <ruletablegraph>
 
 = Appendix: Skewed and ambiguous example grammars <appendix-example-grammars>
 
@@ -675,7 +679,8 @@ Every run in the grammar sweep, no filtering.
 `test_ce` is the held-out next-token cross-entropy; `loss_gap_closed` is the fraction of the uniform#text[→]Bayes gap closed (sanity covariate, not a gate); `root_r2` and `deepest_r2` are the level-$L_0$ and mean level-$L_2$ probe $R^2$.
 Loaded directly from `figures/sweep_sanity.csv`.
 
-#let sanity = csv("figures/sweep_sanity.csv")
+// CSV now also carries root_rmse/deepest_rmse (see @appendix-rmse); keep the R2 columns here for width.
+#let sanity = csv("figures/sweep_sanity.csv").map(r => r.slice(0, 9))
 #figure(
   table(
     columns: 9,
@@ -697,7 +702,7 @@ Every run in the architecture sweep, no filtering — all 99 (11 one-axis-at-a-t
 The deliberately-underpowered small models (e.g. $n_"embd" = 16$) are included.
 Loaded directly from `figures/arch_sanity.csv`.
 
-#let archsanity = csv("figures/arch_sanity.csv")
+#let archsanity = csv("figures/arch_sanity.csv").map(r => r.slice(0, 10))
 #figure(
   table(
     columns: 10,
@@ -718,7 +723,7 @@ Every run in the $L = 4$ depth sweep, no filtering — all 60 (10 grammars $time
 `test_ce` is the held-out next-token cross-entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap closed (covariate, not a gate); `root_r2` and `deepest_r2` the level-$L_0$ and mean leaf-parent-$L_3$ probe $R^2$.
 Loaded directly from `figures/depth4_sanity.csv`.
 
-#let depth4sanity = csv("figures/depth4_sanity.csv")
+#let depth4sanity = csv("figures/depth4_sanity.csv").map(r => r.slice(0, 7))
 #figure(
   table(
     columns: 7,
@@ -739,7 +744,8 @@ Every run in the non-collapse sweep, no filtering — all 27 (3 `skew` $times$ 3
 `bayes_floor` is the exact weighted Bayes-optimal next-token entropy; `loss_gap_closed` the fraction of the uniform#text[→]Bayes gap closed (covariate); `root_r2`/`mid_r2`/`low_r2` the level-$L_0$/$L_1$/$L_2$ probe $R^2$ (shuffled baseline `shuffled_r2`); `k8_entropy` the headline mean $k = 8$ root posterior entropy; `eff_dim`/`hull_area` the reachable-set descriptors.
 Loaded directly from `figures/noncollapse_sanity.csv`.
 
-#let ncsanity = csv("figures/noncollapse_sanity.csv")
+// CSV inserted root/mid/low/shuffled_rmse before k8_entropy (see @appendix-rmse); select the original R2 columns.
+#let ncsanity = csv("figures/noncollapse_sanity.csv").map(r => (0,1,2,3,4,5,6,7,8,9,14,15,16).map(i => r.at(i)))
 #figure(
   table(
     columns: 13,
@@ -753,6 +759,106 @@ Loaded directly from `figures/noncollapse_sanity.csv`.
     No filtering.
     `k8_entropy` $approx 0$ exactly when $rho = 0$ regardless of skew.],
 ) <ncsanitytable>
+
+= Appendix: From $R^2$ to RMSE <appendix-rmse>
+
+Throughout the paper we score the linear probe by the coefficient of determination $R^2$.
+The nearest prior work, #cite(<shai2026>, form: "prose"), instead headlines *root-mean-square error* (RMSE) between the probe's reconstruction and the target belief vectors.
+This appendix reports the RMSE counterpart of every $R^2$ we quote, so a reader coming from that line of work has the familiar number.
+The main text is unchanged; RMSE lives only here (and as extra columns in the per-run sanity CSVs).
+
+*Definition.*
+For a probe that maps the residual stream to a $v$-dimensional belief vector, we compute the RMSE per output component and average over the $v$ components,
+$ "RMSE" = 1/v sum_(j=1)^v sqrt(1/M sum_(i=1)^M (Y_(i j) - hat(Y)_(i j))^2), $
+over the $M$ held-out examples.
+This matches how our $R^2$ is aggregated (a per-output score averaged across the $v$ outputs), so the two metrics use the same across-output averaging.
+
+*$R^2$ and RMSE carry the same information up to the target's scale.*
+For a single output they are linked by $R^2 = 1 - "RMSE"^2 slash "Var"(Y)$, so a *scale-free* RMSE (dividing by the target's standard deviation) is exactly $sqrt(1 - R^2)$ and would add nothing beyond $R^2$.
+Only the *absolute* RMSE — in the units of the belief vector — carries information $R^2$ does not, namely the physical size of the error.
+An RMSE of $0.19$ means the probe's predicted probability for a class is off by about $0.19$ on average, sizeable against belief components that average $1 slash v = 0.125$.
+One consequence: unlike $R^2$, absolute RMSE is *not* monotone across different latents, because each latent's belief vector has its own variance — a latent with higher $R^2$ can still show a similar RMSE if its posterior is more spread out.
+
+*Two caveats on comparing to #cite(<shai2026>, form: "prose").*
+First, the absolute magnitudes are not comparable across the two papers: their regression target is a generalized-hidden-Markov *predictive vector* $bold(eta)_n$ in generalized state coordinates, whereas ours is a posterior distribution on the probability simplex over $v = 8$ symbols — different objects, dimensions, and scales.
+Second, their per-*factor* vectors are *conditionally independent*, so the joint predictive state is their tensor product; our per-*latent* posteriors are marginals of a *dependent* joint (siblings are correlated through their shared parent, and the tree is nested, not factored), so they do not multiply back to the joint.
+The right reading of this appendix is therefore the RMSE-flavored view of *our* recovery — with the per-latent RMSE vector as the structural analog of their per-factor RMSE — not a numeric head-to-head.
+
+*Per-latent RMSE (canonical run).*
+The per-latent probing of @latents is the RHM analog of #cite(<shai2026>, form: "prose")'s per-factor recovery.
+@rmse-latents gives both scores side by side.
+Note that RMSE falls from root to the deeper latents while $R^2$ rises, but not monotonically in lockstep — the mid latent `mid_L1a` has a much higher $R^2$ than the root yet a similar RMSE, exactly the scale effect noted above.
+
+#figure(
+  table(
+    columns: (2fr, 1fr, 1fr),
+    inset: 5pt,
+    align: (left, center, center),
+    stroke: 0.5pt + luma(200),
+    table.header([*Latent*], [*$R^2$*], [*RMSE*]),
+    [root ($L_0$)], [$0.38$], [$0.188$],
+    [mid ($L_1$a)], [$0.51$], [$0.185$],
+    [mid ($L_1$b)], [$0.59$], [$0.144$],
+    [leaf-parent ($L_2$a)], [$0.61$], [$0.182$],
+    [leaf-parent ($L_2$b)], [$0.66$], [$0.154$],
+    [leaf-parent ($L_2$c)], [$0.50$], [$0.145$],
+    [leaf-parent ($L_2$d)], [$0.66$], [$0.117$],
+  ),
+  caption: [Per-latent recovery on the canonical run, $R^2$ (as in @latents) beside the per-output-averaged RMSE.
+    RMSE generally shrinks for deeper latents, but is not a strict monotone image of $R^2$ because each latent's posterior has its own scale.],
+) <rmse-latents>
+
+*Layer accumulation (canonical run).*
+Reading the same root probe at the three residual points, RMSE falls as $R^2$ rises: $R^2 = -0.00 -> 0.15 -> 0.38$ against RMSE $= 0.241 -> 0.221 -> 0.188$ (embedding $->$ after block 1 $->$ after block 2), while the shuffled control stays flat.
+
+*Across the sweeps.*
+The two metrics move together across the RHM family.
+In the grammar sweep (30 runs) the root recovers at $R^2 = 0.35 plus.minus 0.06$ and RMSE $= 0.203 plus.minus 0.007$, and the deepest latents at $R^2 = 0.49$ / RMSE $= 0.171$.
+In the non-collapse sweep the probe *sharpens* on both metrics as ambiguity $rho$ grows: at `skew=none`, root $R^2 = 0.36 -> 0.42 -> 0.53$ while root RMSE $= 0.205 -> 0.132 -> 0.071$ for $rho = 0 -> 0.3 -> 0.6$.
+The per-run sanity CSVs behind the sweep tables (@appendix-sanity, @appendix-arch-sanity, @appendix-depth4-sanity, @appendix-noncollapse-sanity) now carry `root_rmse` / `deepest_rmse` columns (and `mid_rmse` / `low_rmse` / `shuffled_rmse` for the non-collapse grid) beside their $R^2$ columns, though those rendered tables still display $R^2$ for width.
+
+*RMSE-flavored figures.*
+The remaining figures restate the paper's $R^2$ figures in RMSE, computed from the same probes and saved data.
+Because RMSE is lower-is-better and lives in $[0, tilde.op 0.3]$ rather than $[0, 1]$, the axes and heatmap scales differ from their $R^2$ originals, but the ordering of latents, layers, and sweep cells is the mirror image.
+
+#fig("figures/latent_levels_rmse.png",
+  [Per-latent probe RMSE on the canonical run — the RMSE counterpart of @latents.
+   RMSE is generally lower (better) for the deeper latents, mirroring the $R^2$ gradient, but is not its exact reflection because each latent's posterior has a different scale.],
+  w: 72%) <rmse-latents-fig>
+
+#fig("figures/layer_position_rmse.png",
+  [Root-probe RMSE across residual depth and context — the RMSE counterpart of @layerpos.
+   *Left:* RMSE falls across the three readout points while the shuffled control stays high.
+   *Right:* the (readout point, position) RMSE heatmap (autoscaled).],
+  w: 95%) <rmse-layerpos>
+
+#fig("figures/sweep_level_rmse.png",
+  [Per-level probe RMSE across the 30-run grammar sweep — the RMSE counterpart of @sweeplevels.],
+  w: 85%) <rmse-sweeplevels>
+
+#fig("figures/depth4_level_rmse.png",
+  [Per-level probe RMSE across the 60-run $L = 4$ depth sweep — RMSE counterpart of @depth4levels; the inverted-U reads as a U in RMSE (mid latents lowest error).],
+  w: 74%) <rmse-depth4levels>
+
+#fig("figures/depth4_layer_rmse.png",
+  [Root-probe RMSE vs residual index at $L = 4$ — RMSE counterpart of @depth4layer.],
+  w: 74%) <rmse-depth4layer>
+
+#fig("figures/arch_marginal_rmse.png",
+  [Marginal effects of width, depth, heads, and training budget on probe RMSE — RMSE counterpart of @archmarginal.],
+  w: 95%) <rmse-archmarginal>
+
+#fig("figures/arch_depth_accum_rmse.png",
+  [Root-probe RMSE vs normalized residual depth and vs number of layers — RMSE counterpart of @archdepth.],
+  w: 95%) <rmse-archdepth>
+
+#fig("figures/arch_lossfit_rmse.png",
+  [Probe RMSE against loss-gap-closed — RMSE counterpart of @archlossfit.],
+  w: 72%) <rmse-archlossfit>
+
+#fig("figures/noncollapse_heatmap_rmse.png",
+  [Per-level probe RMSE over the skew $times$ ambiguity grid — RMSE counterpart of @ncheatmap; RMSE *falls* left-to-right as ambiguity rises, the probe sharpening as the belief spreads.],
+  w: 100%) <rmse-ncheatmap>
 
 = Appendix: Reproducing every number and figure <appendix-reproduce>
 
