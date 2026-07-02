@@ -1,0 +1,226 @@
+[
+  {
+    "n_embd": 128,
+    "capacity_needed": 28,
+    "slack": 4.571428571428571,
+    "lr": 0.003,
+    "steps": 6000,
+    "early_stop": false,
+    "train_summary": {
+      "final_test_loss": 1.308369261226929,
+      "uniform_baseline": 2.0794415416798357,
+      "bayes_optimal_mean": 1.3012889106049605,
+      "loss_gap_closed": 0.9909010773218252
+    },
+    "per_tree_root_rmse": [
+      0.1715170332816374,
+      0.1256106948558818,
+      0.15000674135078124,
+      0.19762130549963833
+    ],
+    "per_tree_root_rmse_shuffled": [
+      0.34674491054558865,
+      0.34836073587728317,
+      0.3416549960739469,
+      0.33964948823508456
+    ],
+    "own_position": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "own_position_trained": [
+      true,
+      true,
+      true,
+      false
+    ],
+    "pass_threshold_0.03_trained_only": [
+      false,
+      false,
+      false
+    ],
+    "one_hot_fraction_after_1_leaf": 0.04591666666666667,
+    "cross_tree_leakage_rmse": 0.3405586059869675,
+    "cross_tree_leakage_rmse_shuffled": 0.3427260069196658,
+    "cross_tree_leakage_at_baseline": true,
+    "probe_subspace_overlap_pairwise": {
+      "0-1": 0.3945908844470978,
+      "0-2": 0.3351680338382721,
+      "0-3": 0.33859410881996155,
+      "1-2": 0.30458784103393555,
+      "1-3": 0.31398600339889526,
+      "2-3": 0.2854462265968323
+    },
+    "probe_subspace_overlap_mean": 0.32872884968916577
+  },
+  {
+    "n_embd": 256,
+    "capacity_needed": 28,
+    "slack": 9.142857142857142,
+    "lr": 0.003,
+    "steps": 6000,
+    "early_stop": false,
+    "train_summary": {
+      "final_test_loss": 1.3089200055343642,
+      "uniform_baseline": 2.0794415416798357,
+      "bayes_optimal_mean": 1.3012889106049605,
+      "loss_gap_closed": 0.9901933186052938
+    },
+    "per_tree_root_rmse": [
+      0.2575922926084877,
+      0.28611162839665333,
+      0.19819186522788945,
+      0.09833511145257764
+    ],
+    "per_tree_root_rmse_shuffled": [
+      0.35542423415008395,
+      0.3639539793908644,
+      0.3612896349611524,
+      0.35083991698151695
+    ],
+    "own_position": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "own_position_trained": [
+      true,
+      true,
+      true,
+      false
+    ],
+    "pass_threshold_0.03_trained_only": [
+      false,
+      false,
+      false
+    ],
+    "one_hot_fraction_after_1_leaf": 0.04591666666666667,
+    "cross_tree_leakage_rmse": 0.3419153183647141,
+    "cross_tree_leakage_rmse_shuffled": 0.34263806902071847,
+    "cross_tree_leakage_at_baseline": true,
+    "probe_subspace_overlap_pairwise": {
+      "0-1": 0.30306339263916016,
+      "0-2": 0.16905157268047333,
+      "0-3": 0.3549066483974457,
+      "1-2": 0.17733338475227356,
+      "1-3": 0.2689148783683777,
+      "2-3": 0.1259758025407791
+    },
+    "probe_subspace_overlap_mean": 0.2332076132297516
+  },
+  {
+    "n_embd": 512,
+    "capacity_needed": 28,
+    "slack": 18.285714285714285,
+    "lr": 0.0005,
+    "steps": 6000,
+    "early_stop": true,
+    "train_summary": {
+      "final_test_loss": 1.3069840597598876,
+      "uniform_baseline": 2.0794415416798357,
+      "bayes_optimal_mean": 1.3012889106049605,
+      "loss_gap_closed": 0.992681192702439
+    },
+    "per_tree_root_rmse": [
+      0.12324877548031522,
+      0.16026275271066193,
+      0.2712328505527048,
+      0.42413496695434677
+    ],
+    "per_tree_root_rmse_shuffled": [
+      0.3843567356060648,
+      0.41780539830853225,
+      0.7097717808498749,
+      0.6316970753747727
+    ],
+    "own_position": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "own_position_trained": [
+      true,
+      true,
+      true,
+      false
+    ],
+    "pass_threshold_0.03_trained_only": [
+      false,
+      false,
+      false
+    ],
+    "one_hot_fraction_after_1_leaf": 0.04591666666666667,
+    "cross_tree_leakage_rmse": 0.4174692748050298,
+    "cross_tree_leakage_rmse_shuffled": 0.44173764878207344,
+    "cross_tree_leakage_at_baseline": false,
+    "probe_subspace_overlap_pairwise": {
+      "0-1": 0.12658579647541046,
+      "0-2": 0.11480679363012314,
+      "0-3": 0.14543864130973816,
+      "1-2": 0.13093538582324982,
+      "1-3": 0.12762638926506042,
+      "2-3": 0.10691888630390167
+    },
+    "probe_subspace_overlap_mean": 0.12538531546791395
+  },
+  {
+    "n_embd": 1024,
+    "capacity_needed": 28,
+    "slack": 36.57142857142857,
+    "lr": 0.0005,
+    "steps": 8000,
+    "early_stop": true,
+    "train_summary": {
+      "final_test_loss": 1.3081249983185006,
+      "uniform_baseline": 2.0794415416798357,
+      "bayes_optimal_mean": 1.3012889106049605,
+      "loss_gap_closed": 0.9912149783467322
+    },
+    "per_tree_root_rmse": [
+      0.22168294611547013,
+      0.3275685568103883,
+      0.2490292128044842,
+      0.45814194749256776
+    ],
+    "per_tree_root_rmse_shuffled": [
+      0.5638781163364797,
+      0.6996045363754482,
+      0.5538570940315073,
+      0.6994178839818103
+    ],
+    "own_position": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "own_position_trained": [
+      true,
+      true,
+      true,
+      false
+    ],
+    "pass_threshold_0.03_trained_only": [
+      false,
+      false,
+      false
+    ],
+    "one_hot_fraction_after_1_leaf": 0.04591666666666667,
+    "cross_tree_leakage_rmse": 0.49772383396410036,
+    "cross_tree_leakage_rmse_shuffled": 0.5786101726836373,
+    "cross_tree_leakage_at_baseline": false,
+    "probe_subspace_overlap_pairwise": {
+      "0-1": 0.07064259052276611,
+      "0-2": 0.07674413174390793,
+      "0-3": 0.0750177651643753,
+      "1-2": 0.06696824729442596,
+      "1-3": 0.07851521670818329,
+      "2-3": 0.08971623331308365
+    },
+    "probe_subspace_overlap_mean": 0.07626736412445705
+  }
+]
