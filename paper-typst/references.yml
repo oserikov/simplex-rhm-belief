@@ -22,6 +22,61 @@ hewitt2019:
     arxiv: "1909.03368"
   url: "https://arxiv.org/abs/1909.03368"
 
+ding2016:
+  type: article
+  title: "Cortical tracking of hierarchical linguistic structures in connected speech"
+  author:
+    - "Ding, Nai"
+    - "Melloni, Lucia"
+    - "Zhang, Hang"
+    - "Tian, Xing"
+    - "Poeppel, David"
+  date: 2016
+  parent:
+    - type: periodical
+      title: "Nature Neuroscience"
+      volume: 19
+      issue: 1
+  page-range: "158-164"
+  serial-number:
+    doi: "10.1038/nn.4186"
+    pmid: "26642090"
+  url: "https://doi.org/10.1038/nn.4186"
+
+bazhukov2024:
+  type: article
+  title: "Of Models and Men: Probing Neural Networks for Agreement Attraction with Psycholinguistic Data"
+  author:
+    - "Bazhukov, Maxim"
+    - "Voloshina, Ekaterina"
+    - "Pletenev, Sergey"
+    - "Anisimov, Arseny"
+    - "Serikov, Oleg"
+    - "Toldova, Svetlana"
+  date: 2024
+  parent:
+    - type: proceedings
+      title: "Proceedings of the 28th Conference on Computational Natural Language Learning (CoNLL)"
+  page-range: "280-290"
+  url: "https://aclanthology.org/2024.conll-1.22/"
+
+komissarenko2025:
+  type: article
+  title: "SIGNAL: Dataset for Semantic and Inferred Grammar Neurological Analysis of Language"
+  author:
+    - "Komissarenko, Anna"
+    - "Voloshina, Ekaterina"
+    - "Cheveleva, Anastasia"
+  date: 2025
+  parent:
+    - type: periodical
+      title: "Scientific Data"
+      volume: 12
+  page-range: "1687"
+  serial-number:
+    doi: "10.1038/s41597-025-05966-x"
+  url: "https://doi.org/10.1038/s41597-025-05966-x"
+
 shai2026:
   type: article
   title: "Transformers learn factored representations"

@@ -73,6 +73,11 @@ plt.close()
 print("wrote", out, os.path.getsize(out), "bytes")
 
 # ---- RMSE variant ------------------------------------------------------
+# Note: (layer=1, position=5) is a catastrophic-overfit outlier (R^2=-823
+#   there, see heatmap_layer_position_r2), so its raw RMSE (~7.6) is not
+#   informative about probe quality. Colors are clipped to the heatmap's
+#   second-largest value so this single outlier cannot flatten the rest of
+#   the scale; annotations still show the raw value.
 layer_rmse = np.array(A["layer_rmse"])
 shuf_rmse = np.array(A["layer_rmse_shuffled"])
 heat_rmse = np.array(A["heatmap_layer_position_rmse"])
@@ -92,11 +97,17 @@ for i, y in enumerate(layer_rmse):
     ax1.annotate(f"{y:.2f}", (lx[i], y), textcoords="offset points",
                  xytext=(0, 9), ha="center", fontsize=9)
 
+rmse_vmax = 0.5
+above_mask = heat_rmse > rmse_vmax
 heat_annot_rmse = np.vectorize(fmt_r2)(heat_rmse)
-hm = sns.heatmap(heat_rmse, ax=ax2, cmap="viridis", vmin=0,
+hm = sns.heatmap(heat_rmse, ax=ax2, cmap="viridis", vmin=0, vmax=rmse_vmax,
+                 mask=above_mask,
                  annot=heat_annot_rmse, fmt="", annot_kws={"size": 8},
-                 cbar_kws={"label": "RMSE color scale"},
+                 cbar_kws={"label": f"RMSE color scale (clipped to {rmse_vmax:.2f})"},
                  linewidths=0.5, linecolor="white")
+for ell, t in zip(*np.where(above_mask), strict=True):
+    ax2.text(t + 0.5, ell + 0.5, heat_annot_rmse[ell, t], ha="center", va="center",
+              fontsize=8, color="0.2")
 ax2.set_xlabel("Context position $k$")
 ax2.set_ylabel("Layer")
 ax2.set_yticklabels([f"{i}" for i in range(nL)], rotation=0)
