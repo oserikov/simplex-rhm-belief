@@ -1,3 +1,5 @@
+*note:* I made a tiny edit to the paper text at 9:05 my time. I'm fine if this is not taken into account, given the ddl was earlier! Just didn't want to leave the obvious problem given I caught it, and the repo is mine...
+
 # Simplex RHM Belief
 
 This repository contains the experiments and paper for studying whether a tiny transformer trained on Recursive Hidden Markov Model (RHM) emissions represents the ground-truth posterior over the RHM latent state.
