@@ -156,7 +156,8 @@ def train(args, out_dir: Path = ART, grammar=None) -> dict:
     model = build_model(g, args.n_layer, args.n_embd, args.n_head).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"model params={n_params}")
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0)
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr,
+                            weight_decay=getattr(args, "weight_decay", 0.0))
 
     uniform_baseline = float(np.log(g.v))
     floor = conditional_entropy_floor(g)
@@ -169,6 +170,8 @@ def train(args, out_dir: Path = ART, grammar=None) -> dict:
     # sample trees by their generation probability (uniform when skew=none)
     train_rng = np.random.default_rng(args.seed + 1)
     uniform_w = bool(np.allclose(train_p, train_p[0]))
+    early_stop = getattr(args, "early_stop", False)
+    best_test, best_state, best_step = float("inf"), None, -1
     loss_history = []  # (step, train_loss, test_loss) at every log_every for the loss curve
     for step in range(args.steps):
         if uniform_w:
@@ -186,6 +189,14 @@ def train(args, out_dir: Path = ART, grammar=None) -> dict:
             model.train()
             loss_history.append([int(step), float(loss.item()), float(tl)])
             print(f"step {step:4d} train_loss={loss.item():.4f} test_loss={tl:.4f}")
+            if early_stop and tl < best_test:
+                best_test, best_step = tl, step
+                best_state = {k: v.clone() for k, v in model.state_dict().items()}
+
+    if early_stop and best_state is not None:
+        model.load_state_dict(best_state)
+        print(f"early_stop: restored best checkpoint at step {best_step} "
+              f"(test_loss={best_test:.4f})")
 
     final_test = eval_test_loss(model, test_t, weights=test_w)
     print(f"FINAL test_loss={final_test:.4f} (uniform {uniform_baseline:.4f}, "

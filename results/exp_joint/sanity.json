@@ -2,24 +2,25 @@
   "grammar": {
     "s": 2,
     "L": 2,
-    "v": 4,
+    "v": 32,
     "m": 2,
-    "n_configs": 32,
-    "joint_simplex_dim": 31
+    "n_configs": 256,
+    "joint_simplex_dim": 255
   },
-  "n_embd": 64,
-  "caveat": "Only 32 unique leaf strings exist in total; the LM test split (4 strings) is too small for final_test_loss to be a meaningful generalization metric (it rises with training, i.e. memorization of the 28 training strings, which is expected at this scale). The probe below is fit/evaluated only on TRAIN strings' hidden states, so it is unaffected by that held-out generalization gap; steps=300 was chosen because train_loss is already near the Bayes-optimal floor by then. RidgeCV (not plain OLS) is used for the joint probe: with only ~112 total probe rows against 64 features, unregularized OLS scored WORSE than a predict-the-mean baseline (0.43 vs 0.10 RMSE) -- a sample-size artifact, not a representational one.",
+  "n_embd": 256,
+  "rerun_note": "Rerun of exp_joint fixing a memorization confound in the original run (v=4,m=2,s=2,L=2, 32 total leaf strings): that grammar let the model memorize its 28 training strings (loss_gap_closed=-0.75, held-out loss worse than uniform), so no belief-geometry conclusion could be drawn. This run uses v=32,m=2,s=2,L=2 (256 distinct leaf strings, ~218 for training) and gates on loss_gap_closed >= 0.5 (asserted in exp_joint.py before any probe results are computed). Note: n_embd=256 (required so the model has room to linearly embed the 255-dim joint simplex) gives ~1.6M params against only ~218 training strings, so the model memorizes within ~100-200 steps regardless of which grammar in the 150-300-config range is chosen (train loss dips below the Bayes-optimal floor while held-out loss climbs, even with weight decay up to 1.0 and 40k-step runs -- no grokking observed in that budget). train.train gained an early_stop=True option (default off, backward compatible) that restores the checkpoint with the lowest held-out loss instead of the final step; combined with batch_size=16 and weight_decay=0.5 this clears the gate (0.54) using the checkpoint at step 125 of 2000.",
+  "caveat": "RidgeCV (not plain OLS) is used for the joint probe, with mean and shuffled-label baselines reported alongside for comparison; support-restricted RMSE (only nonzero target entries) is reported because plain RMSE flatters a predict-zeros probe given how sparse the joint target is -- and indeed does here: joint_rmse_plain (0.038) is statistically indistinguishable from the mean and shuffled baselines (0.038, 0.039), while joint_rmse_support_restricted (0.29) is far worse than the implied marginals (~0.10-0.12), i.e. plain joint RMSE is entirely a sparsity artifact here, not a sign of a well-embedded joint.",
   "train_summary": {
-    "final_test_loss": 1.7826479077339172,
-    "uniform_baseline": 1.3862943611198906,
-    "bayes_optimal_mean": 0.8551599505103966,
-    "loss_gap_closed": -0.7462396310553445
+    "final_test_loss": 2.0268686162798026,
+    "uniform_baseline": 3.4657359027997265,
+    "bayes_optimal_mean": 0.8013582311477653,
+    "loss_gap_closed": 0.5400387872293648
   },
-  "joint_rmse_plain": 0.10649321228265762,
-  "joint_rmse_support_restricted": 0.23846052587032318,
-  "joint_rmse_mean_baseline": 0.09893576800823212,
-  "joint_rmse_shuffled_baseline": 0.10087442398071289,
-  "implied_root_rmse": 0.2938945619260933,
-  "implied_node10_rmse": 0.21218226340778845,
-  "implied_node11_rmse": 0.2321226386332696
+  "joint_rmse_plain": 0.03762243688106537,
+  "joint_rmse_support_restricted": 0.28528741002082825,
+  "joint_rmse_mean_baseline": 0.037584979087114334,
+  "joint_rmse_shuffled_baseline": 0.03871443495154381,
+  "implied_root_rmse": 0.12118117068264123,
+  "implied_node10_rmse": 0.11408104556961723,
+  "implied_node11_rmse": 0.10258473645645269
 }
