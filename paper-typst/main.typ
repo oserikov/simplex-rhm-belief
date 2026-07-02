@@ -234,7 +234,7 @@ Each question in @initial-results is answered by one method, with the reading fi
 *Is the belief linearly present?* Fit one global affine map (least squares) from the final-layer residual to the exact root posterior; score by held-out $R^2$, against the identical probe fit to *shuffled* labels #cite(<hewitt2019>). $R^2$ well above the shuffled #text[≈]0 signals a linear image of the belief; $R^2$ at the control level would signal none. #todooleg[I grew dissatisfied with probes error scores over time, they lose too much information] $R^2$ is chosen because it is scale-free so scores remain comparable across latents, grammars, and sweep cells whose posteriors have very different spreads / variance. Its absolute-error counterpart RMSE is reported for every $R^2$ in @appendix-rmse, and highlighted in the main text when provides new information.
 
 
-*Where is it built?* Score the same probe at each of the $n_"layer" + 1$ residual readout points, and separately at each context position. $R^2$ rising with readout depth signals additive accumulation; a flat profile was a pre-registered falsification handle.
+*Where is it built?* Fit the same affine-probe protocol separately at each of the n_layer + 1 residual readout points, pooling context positions within each readout point. Rising held-out $R^2$ with readout depth signals additive accumulation.
 
 *Which latents?* One probe per tree node, each targeting that node's exact posterior. The cross-node $R^2$ pattern maps which parts of the hierarchy the residual carries and how strongly.
 
